@@ -1,3 +1,4 @@
 token=
 #Channels in which the bot is present. Seperate by ';'
 channels=
+dbPath=
