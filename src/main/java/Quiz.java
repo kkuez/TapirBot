@@ -18,6 +18,7 @@ public class Quiz implements ReceiveModule {
     public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
+    private List<QuizAnswer> answers;
 
     public Quiz(DBService dbService) {
         this.dbService = dbService;
@@ -57,13 +58,30 @@ public class Quiz implements ReceiveModule {
             }
         } else {
             if (status.equals(QuizStatus.WAITING)) {
-                checkAnswer(user, message, bot, channel);
+                if(isInteger(message)) {
+                    checkAnswer(user, Integer.parseInt(message), bot, channel);
+                }
             } else {
                 //Question + Wait status
                 question(user, channel);
             }
         }
         System.out.println();
+    }
+
+    private boolean isInteger(String message) {
+        try{
+            Integer.parseInt(message);
+        } catch (NumberFormatException e) {
+            System.out.println(message + "is not Integer");
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean waitingForAnswer() {
+        return status.equals(QuizStatus.WAITING);
     }
 
     private void info(TextChannel channel) {
@@ -80,28 +98,38 @@ public class Quiz implements ReceiveModule {
     }
 
 
-    private void checkAnswer(User user, String message, JDA bot, TextChannel channel) {
-        final Optional<QuizAnswer> rightAnswerOpt =
-                question.getAnswers().stream().filter(quizAnswer -> quizAnswer.isCorrect()).findFirst();
-        String answerOfUser = NO_CLUE;
+    private void checkAnswer(User user, int answerNr, JDA bot, TextChannel channel) {
+        int rightAnswerIndex = getRightAnswerIndex();
+        answerNr = answerNr - 1;
 
-        if (message.equals(rightAnswerOpt.get().getText())) {
+        String answerOfUser = NO_CLUE;
+        if (answerNr == rightAnswerIndex) {
             //send right
             channel.sendMessage("Yessa " + user.getName() + "! Das war richtig, +3 Punkte für dich!").queue();
             answerOfUser = RIGHT_ANSWER;
         } else {
-            if (message.equals(NO_CLUE)) {
+            if (answerNr == 4) {
                 // send mid
                 channel.sendMessage("Hm ok... Nix gewonnen, nix verloren.").queue();
             } else {
                 //send wrong
                 channel.sendMessage("Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!").queue();
-                answerOfUser = question.getAnswers().get(Integer.parseInt(message) - 1).getColumn();
+                answerOfUser = answers.get(answerNr).getColumn();
             }
         }
 
-        dbService.sendAnswer(user.getIdLong(), question.getId(), NO_CLUE);
+        dbService.sendAnswer(user.getIdLong(), question.getId(), answerOfUser);
         status = QuizStatus.NONE;
+    }
+
+    private int getRightAnswerIndex() {
+        for(int i=0;i<4;i++) {
+            if(answers.get(i).isCorrect()) {
+                return i;
+            }
+        }
+
+        return 99;
     }
 
     private void question(User user, TextChannel channel) {
@@ -110,6 +138,7 @@ public class Quiz implements ReceiveModule {
             question = questionsForUser.get(0);
             List<QuizAnswer> answers = question.getAnswers();
             Collections.shuffle(answers);
+            this.answers = answers;
 
             StringBuilder questionBuilder = new StringBuilder("Frage: ");
             questionBuilder.append(question.getText()).append("\n");
@@ -123,9 +152,12 @@ public class Quiz implements ReceiveModule {
             channel.sendMessage(questionBuilder.toString()).queue();
             this.status = QuizStatus.WAITING;
         } else {
-            //TODO Meldung dass keine Fragen mehr vorhanden sind
+            channel.sendMessage("Sorry " + user.getName() + ", Du hast schon alle Fragen beantwortet. Warte " +
+                    "bis es neue gibt ;)").queue();
         }
     }
+
+
 
     static class RankingTableEntry {
         private Long userId;

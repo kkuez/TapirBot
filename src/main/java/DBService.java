@@ -1,5 +1,10 @@
 import net.dv8tion.jda.api.entities.User;
+import org.sqlite.SQLiteConfig;
+import org.sqlite.javax.SQLiteConnectionPoolDataSource;
+import org.sqlite.javax.SQLitePooledConnection;
 
+import javax.sql.ConnectionPoolDataSource;
+import javax.sql.PooledConnection;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
@@ -8,10 +13,19 @@ public class DBService {
 
     private final String dbPath;
     private Set<Long> knownUsers;
+    private SQLiteConnectionPoolDataSource poolDataSource;
 
     public DBService(Properties properties) {
         dbPath = new File(properties.get("dbPath").toString()).getAbsolutePath();
         readUsers();
+        try {
+            Class.forName("org.sqlite.JDBC");
+            DriverManager.registerDriver(new org.sqlite.JDBC());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
+        }
         System.out.println();
     }
 
@@ -46,14 +60,14 @@ public class DBService {
         final long userId = getUserId(user);
         List<QuizQuestion> questions = new ArrayList<>();
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("select * from QuizQuestions where not EXISTS " +
+             ResultSet rs = statement.executeQuery("select * from QuizQuestions qq where not qq.id=" +
                      "(Select question from User_QuizQuestions where user =" + userId + ")")) {
             while (rs.next()) {
                 List<QuizAnswer> answers = new ArrayList<>(4);
-                answers.add(new QuizAnswer(rs.getString(Quiz.RIGHT_ANSWER), true, Quiz.RIGHT_ANSWER));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_1), true, Quiz.WRONG_ANSWER_1));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_2), true, Quiz.WRONG_ANSWER_2));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_3), true, Quiz.WRONG_ANSWER_3));
+                answers.add(new QuizAnswer(rs.getString(Quiz.RIGHT_ANSWER), Quiz.RIGHT_ANSWER));
+                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_1), Quiz.WRONG_ANSWER_1));
+                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_2), Quiz.WRONG_ANSWER_2));
+                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_3), Quiz.WRONG_ANSWER_3));
 
                 QuizQuestion question = new QuizQuestion(
                         rs.getInt("id"),
@@ -77,13 +91,11 @@ public class DBService {
     }
 
     public void sendAnswer(long userId, int questionId, String answer) {
-        if (!knownUsers.contains(userId)) {
-            try (Statement statement = getConnection().createStatement();) {
-                statement.executeUpdate(
-                        "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId + "," + questionId + ")");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate(
+                    "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId + "," + questionId + ")");
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 

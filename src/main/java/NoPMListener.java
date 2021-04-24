@@ -29,7 +29,7 @@ public class NoPMListener extends TapirListener {
 
         final String message = messageRaw.replace("!", "").toLowerCase();
         for(ReceiveModule receiveModule: receiveModules) {
-            if(receiveModule.getCommands().contains(message)) {
+            if(receiveModule.waitingForAnswer() || receiveModule.getCommands().contains(message.split(" ")[0])) {
                 receiveModule.handle(author, message, getBot(), event.getChannel());
             }
         }

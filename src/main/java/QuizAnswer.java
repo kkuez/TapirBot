@@ -1,11 +1,9 @@
 public class QuizAnswer {
     private String text;
-    private boolean isCorrect;
     private String column;
 
-    public QuizAnswer(String text, boolean isCorrect, String column) {
+    public QuizAnswer(String text,  String column) {
         this.text = text;
-        this.isCorrect = isCorrect;
         this.column = column;
     }
 
@@ -14,7 +12,7 @@ public class QuizAnswer {
     }
 
     public boolean isCorrect() {
-        return isCorrect;
+        return column.equals(Quiz.RIGHT_ANSWER);
     }
 
     public String getColumn() {

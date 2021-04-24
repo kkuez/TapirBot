@@ -8,4 +8,6 @@ public interface ReceiveModule {
     public Set<String> getCommands();
 
     void handle(User user, String message, JDA bot, TextChannel channel);
+
+    boolean waitingForAnswer();
 }
