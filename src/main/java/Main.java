@@ -27,6 +27,7 @@ public class Main {
         final Guild guild = textChannelById.getGuild();
         final List<Member> members = guild.getMembers();
         bot.addEventListener(new NoPMListener(properties, dbService, bot));
+        bot.addEventListener(new PMListener(properties, dbService, bot));
 
         Scanner scanner = new Scanner(System.in);
         while(true) {

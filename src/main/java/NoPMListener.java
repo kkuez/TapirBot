@@ -12,28 +12,17 @@ import java.util.Set;
 
 public class NoPMListener extends TapirListener {
 
-    private Set<ReceiveModule> receiveModules;
-
     public NoPMListener(Properties properties, DBService dbService, JDA bot) {
         super(properties, dbService, bot);
-        receiveModules = Set.of(new Quiz(dbService));
     }
 
     @Override
     public void onGuildMessageReceived(@Nonnull GuildMessageReceivedEvent event) {
-        final User author = event.getAuthor();
-        doUserCheck(author);
+        final UserWrapper userWrapper = doUserCheck(event.getAuthor());
 
         String messageRaw = event.getMessage().getContentDisplay();
         if(!messageRaw.startsWith("!")) { return; }
 
-        final String message = messageRaw.replace("!", "").toLowerCase();
-        for(ReceiveModule receiveModule: receiveModules) {
-            if(receiveModule.waitingForAnswer() || receiveModule.getCommands().contains(message.split(" ")[0])) {
-                receiveModule.handle(author, message, getBot(), event.getChannel());
-            }
-        }
-
-        System.out.println();
+        userWrapper.handle(event, getDbService(), getBot());
     }
 }

@@ -1,10 +1,6 @@
 import net.dv8tion.jda.api.entities.User;
-import org.sqlite.SQLiteConfig;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
-import org.sqlite.javax.SQLitePooledConnection;
 
-import javax.sql.ConnectionPoolDataSource;
-import javax.sql.PooledConnection;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
@@ -42,12 +38,12 @@ public class DBService {
         }
     }
 
-    public void handleUser(User user) {
-        final long userId = getUserId(user);
+    public void handleUser(UserWrapper user) {
+        final long userId = getUserId(user.getUser());
         if (!knownUsers.contains(userId)) {
             try (Statement statement = getConnection().createStatement();) {
                 statement.executeUpdate(
-                        "insert into User(id, name) values(" + userId + ",'" + user.getName() + "')");
+                        "insert into User(id, name) values(" + userId + ",'" + user.getUser().getName() + "')");
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -56,12 +52,16 @@ public class DBService {
         }
     }
 
-    public List<QuizQuestion> getQuestionsForUser(User user) {
+    /***
+     * Gets Questions which the user has not yet answered
+     */
+    public List<QuizQuestion> getFilteredQuestionsForUser(User user) {
         final long userId = getUserId(user);
         List<QuizQuestion> questions = new ArrayList<>();
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("select * from QuizQuestions qq where not qq.id=" +
-                     "(Select question from User_QuizQuestions where user =" + userId + ")")) {
+             ResultSet rs = statement.executeQuery("Select * from QuizQuestions qq inner join User u on " +
+                     "u.id=qq.user where not exists (select * from User_QuizQuestions uqq where qq.id=uqq.question " +
+                     "and uqq.user=" + userId + ") and not qq.user=" + userId)) {
             while (rs.next()) {
                 List<QuizAnswer> answers = new ArrayList<>(4);
                 answers.add(new QuizAnswer(rs.getString(Quiz.RIGHT_ANSWER), Quiz.RIGHT_ANSWER));
@@ -72,7 +72,8 @@ public class DBService {
                 QuizQuestion question = new QuizQuestion(
                         rs.getInt("id"),
                         rs.getString("text"),
-                        answers
+                        answers,
+                        rs.getString("name")
                 );
                 questions.add(question);
             }
@@ -93,7 +94,8 @@ public class DBService {
     public void sendAnswer(long userId, int questionId, String answer) {
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate(
-                    "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId + "," + questionId + ")");
+                    "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId
+                            + "," + questionId + ")");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -103,21 +105,69 @@ public class DBService {
         List<Quiz.RankingTableEntry> rankingTable = new ArrayList<>();
 
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("select user as userId, (select name from User where " +
-                     "id=uuq.user) as userName, (select sum(IIF(answer ='Right_Answer', 3, IIF(answer = " +
-                     "'Keine Ahnung!', 0, -2))) from User_QuizQuestions where user=uuq.user) as points from " +
-                     "User_QuizQuestions uuq group by points order by points DESC")) {
+             ResultSet rs = statement.executeQuery("select user as userId, " +
+                     "(select name from User where id=uuq.user) as userName, " +
+                     "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
+                     "from User_QuizQuestions where user=uuq.user) as points, " +
+                     "count(question) as answered " +
+                     "from User_QuizQuestions uuq group by points order by points DESC")) {
             while (rs.next()) {
                 final Quiz.RankingTableEntry rankingTableEntry =
                         new Quiz.RankingTableEntry(
                                 rs.getLong("userId"),
                                 rs.getString("userName"),
-                                rs.getInt("points"));
+                                rs.getInt("points") +
+                                        getQuestionsCreatedByUser(rs.getLong("userId")).size(),
+                                rs.getInt("answered"));
                 rankingTable.add(rankingTableEntry);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return rankingTable;
+    }
+
+    public void enterQuestions(User user, QuizQuestion question, List<QuizAnswer> answers) {
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate(
+                    "insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1," +
+                            "Wrong_Answer_2, Wrong_Answer_3, user) values('" + question.getText() + "','"
+                            + answers.get(0).getText() + "','" +
+                            answers.get(1).getText() + "','" +
+                            answers.get(2).getText() + "','" +
+                            answers.get(3).getText() + "'," +
+                            user.getIdLong() + ")");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Gets questions which where created by the user
+     * */
+    public List<QuizQuestion> getQuestionsCreatedByUser(long userId) {
+        List<QuizQuestion> questions = new ArrayList<>();
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs = statement.executeQuery("Select * from QuizQuestions where user=" + userId)) {
+            while (rs.next()) {
+                List<QuizAnswer> answers = new ArrayList<>(4);
+                answers.add(new QuizAnswer(rs.getString(Quiz.RIGHT_ANSWER), Quiz.RIGHT_ANSWER));
+                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_1), Quiz.WRONG_ANSWER_1));
+                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_2), Quiz.WRONG_ANSWER_2));
+                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_3), Quiz.WRONG_ANSWER_3));
+
+                QuizQuestion question = new QuizQuestion(
+                        rs.getInt("id"),
+                        rs.getString("text"),
+                        answers,
+                        rs.getString("user")
+                );
+                questions.add(question);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return questions;
     }
 }
