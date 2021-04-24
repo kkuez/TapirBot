@@ -166,8 +166,8 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append(entry.getPoints()).append(" Punkte bei ").append("\t").append(entry.getAnswered())
-                    .append(" Fragen").append("\n");
+            builder.append(entry.getPoints()).append(" Punkte (").append("\t").append(entry.getAnswered())
+                    .append(" Fragen beantwortet)").append("\n");
             i++;
         }
 
