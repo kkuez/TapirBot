@@ -1,3 +1,5 @@
+package tapir;
+
 import net.dv8tion.jda.api.entities.User;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 
@@ -110,7 +112,7 @@ public class DBService {
                      "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
                      "from User_QuizQuestions where user=uuq.user) as points, " +
                      "count(question) as answered " +
-                     "from User_QuizQuestions uuq group by points order by points DESC")) {
+                     "from User_QuizQuestions uuq group by points order by points ASC")) {
             while (rs.next()) {
                 final Quiz.RankingTableEntry rankingTableEntry =
                         new Quiz.RankingTableEntry(
@@ -124,6 +126,8 @@ public class DBService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        rankingTable.sort(Comparator.comparing(Quiz.RankingTableEntry::getPoints));
+        Collections.reverse(rankingTable);
         return rankingTable;
     }
 
@@ -131,15 +135,19 @@ public class DBService {
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate(
                     "insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1," +
-                            "Wrong_Answer_2, Wrong_Answer_3, user) values('" + question.getText() + "','"
-                            + answers.get(0).getText() + "','" +
-                            answers.get(1).getText() + "','" +
-                            answers.get(2).getText() + "','" +
-                            answers.get(3).getText() + "'," +
+                            "Wrong_Answer_2, Wrong_Answer_3, user) values('" + mangleChars(question.getText()) + "','"
+                            + mangleChars(answers.get(0).getText()) + "','" +
+                            mangleChars(answers.get(1).getText()) + "','" +
+                            mangleChars(answers.get(2).getText()) + "','" +
+                            mangleChars(answers.get(3).getText()) + "'," +
                             user.getIdLong() + ")");
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    private String mangleChars(String input) {
+        return input.replace("'", "''");
     }
 
     /**

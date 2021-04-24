@@ -1,10 +1,9 @@
+package tapir;
+
 import net.dv8tion.jda.api.JDA;
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
-import net.dv8tion.jda.internal.JDAImpl;
-import net.dv8tion.jda.internal.entities.UserImpl;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -47,7 +46,7 @@ public class UserWrapper {
     public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot) {
         for(ReceiveModule module: modules.values()) {
             if(module.waitingForAnswer()) {
-                module.handlePM(user, event.getMessage().getContentRaw().replace("!", "").toLowerCase(),
+                module.handlePM(user, event.getMessage().getContentRaw().replace("!", ""),
                         bot, event.getChannel());
             }
         }

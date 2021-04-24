@@ -1,3 +1,5 @@
+package tapir;
+
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
@@ -65,7 +67,7 @@ public class Quiz extends ReceiveModule {
         } else {
             if (status.equals(QuizStatus.WAITING_ANSWER)) {
                 if (isInteger(message)) {
-                    checkAnswer(user, Integer.parseInt(message), bot, channel);
+                    checkAnswer(user, Integer.parseInt(message));
                 }
             } else {
                 //Question + Wait status
@@ -112,16 +114,16 @@ public class Quiz extends ReceiveModule {
     }
 
     @Override
-    public void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel) {
+    public void handlePM(User user, String input, JDA bot, PrivateChannel channel) {
         if (status.equals(QuizStatus.WAITING_QUESTION)) {
-            question = new QuizQuestion(99, toLowerCase, null, null);
+            question = new QuizQuestion(99, input, null, null);
             channel.sendMessage("Wie lautet die richtige Antwort?").queue();
             status = QuizStatus.WAITING_QUESTION_ANSWERS;
         } else {
             if (status.equals(QuizStatus.WAITING_QUESTION_ANSWERS)) {
                 for (int i = 0; i < 4; i++) {
                     if (answers.size() == i) {
-                        answers.add(new QuizAnswer(toLowerCase, i == 0 ? RIGHT_ANSWER :
+                        answers.add(new QuizAnswer(input, i == 0 ? RIGHT_ANSWER :
                                 i == 1 ? WRONG_ANSWER_1 :
                                         i == 2 ? WRONG_ANSWER_2 :
                                                 i == 3 ? WRONG_ANSWER_3 : ""));
@@ -174,26 +176,28 @@ public class Quiz extends ReceiveModule {
     }
 
 
-    private void checkAnswer(User user, int answerNr, JDA bot, TextChannel channel) {
+    private void checkAnswer(User user, int answerNr) {
         int rightAnswerIndex = getRightAnswerIndex();
         answerNr = answerNr - 1;
 
         String answerOfUser = NO_CLUE;
+        final String sendToUser;
         if (answerNr == rightAnswerIndex) {
             //send right
-            channel.sendMessage("Yessa " + user.getName() + "! Das war richtig, +3 Punkte für dich!").queue();
+            sendToUser = "Yessa " + user.getName() + "! Das war richtig, +3 Punkte für dich!";
             answerOfUser = RIGHT_ANSWER;
         } else {
             if (answerNr == 4) {
                 // send mid
-                channel.sendMessage("Hm ok... Nix gewonnen, nix verloren.").queue();
+                sendToUser = "Hm ok... Nix gewonnen, nix verloren.";
             } else {
                 //send wrong
-                channel.sendMessage("Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!").queue();
+                sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!";
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
 
+        user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser).queue());
         dbService.sendAnswer(user.getIdLong(), question.getId(), answerOfUser);
         status = QuizStatus.NONE;
     }
@@ -209,8 +213,9 @@ public class Quiz extends ReceiveModule {
     }
 
     private void question(User user, TextChannel channel) {
-        final List<QuizQuestion> questionsForUser = dbService.getFilteredQuestionsForUser(user);
+        List<QuizQuestion> questionsForUser = dbService.getFilteredQuestionsForUser(user);
         if (!questionsForUser.isEmpty()) {
+            Collections.shuffle(questionsForUser);
             question = questionsForUser.get(0);
             List<QuizAnswer> answers = question.getAnswers();
             Collections.shuffle(answers);

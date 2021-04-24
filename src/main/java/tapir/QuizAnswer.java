@@ -1,3 +1,5 @@
+package tapir;
+
 public class QuizAnswer {
     private String text;
     private String column;

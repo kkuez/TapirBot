@@ -1,3 +1,5 @@
+package tapir;
+
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import org.jetbrains.annotations.NotNull;
