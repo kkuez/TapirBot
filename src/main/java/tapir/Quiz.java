@@ -89,10 +89,9 @@ public class Quiz extends ReceiveModule {
     private void help(TextChannel channel) {
         String helpText = "Willkommen zum Quizmodul des TapirBots!" +
                 "\nEs gibt folgende Befehle:" +
-                "\n\t!q oder !quiz" +
-                "\n\t\tGibt dir eine Frage die du noch nicht beantwortet hast" +
-                "\n\t!q info oder !quiz info" +
-                "\n\t\tGibt dir die aktuelle Tabelle" +
+                "\n\t!q oder !quiz: Gibt dir eine Frage die du noch nicht beantwortet hast" +
+                "\n\t!q info oder !quiz info: Gibt dir die aktuelle Tabelle" +
+                "\n\t!q new oder !quiz new: Gib eine neue Frage ein und kassier einen Punkt!" +
                 "\n\n Viel Spass beim Rätseln :)";
         channel.sendMessage(helpText).queue();
     }
