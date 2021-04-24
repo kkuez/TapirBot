@@ -192,7 +192,8 @@ public class Quiz extends ReceiveModule {
                 sendToUser = "Hm ok... Nix gewonnen, nix verloren.";
             } else {
                 //send wrong
-                sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!";
+                sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!\n Die richtige Antwort ist: " +
+                answers.get(rightAnswerIndex).getText();
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
