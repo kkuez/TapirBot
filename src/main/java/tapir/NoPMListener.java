@@ -14,11 +14,9 @@ public class NoPMListener extends TapirListener {
 
     @Override
     public void onGuildMessageReceived(@Nonnull GuildMessageReceivedEvent event) {
-        final UserWrapper userWrapper = doUserCheck(event.getAuthor());
-
         String messageRaw = event.getMessage().getContentDisplay();
         if(!messageRaw.startsWith("!")) { return; }
-
+        final UserWrapper userWrapper = doUserCheck(event.getAuthor());
         userWrapper.handle(event, getDbService(), getBot());
     }
 }

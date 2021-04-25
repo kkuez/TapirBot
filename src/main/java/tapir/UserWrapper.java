@@ -26,7 +26,6 @@ public class UserWrapper {
 
     public void handle(GuildMessageReceivedEvent event, DBService dbService, JDA bot) {
         final String message = event.getMessage().getContentRaw().replace("!", "").split(" ")[0].toLowerCase();
-
         switch (message) {
             case "q":
             case "quiz":
@@ -45,10 +44,8 @@ public class UserWrapper {
 
     public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot) {
         for(ReceiveModule module: modules.values()) {
-            if(module.waitingForAnswer()) {
                 module.handlePM(user, event.getMessage().getContentRaw().replace("!", ""),
                         bot, event.getChannel());
-            }
         }
     }
 }

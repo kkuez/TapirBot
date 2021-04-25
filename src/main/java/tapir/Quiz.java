@@ -13,12 +13,12 @@ public class Quiz extends ReceiveModule {
     private final DBService dbService;
     private QuizStatus status;
     private QuizQuestion question;
+    private List<QuizAnswer> answers;
     public static String RIGHT_ANSWER = "Right_Answer";
     public static String WRONG_ANSWER_1 = "Wrong_Answer_1";
     public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
-    private List<QuizAnswer> answers;
 
     public Quiz(DBService dbService) {
         this.dbService = dbService;
@@ -111,42 +111,66 @@ public class Quiz extends ReceiveModule {
 
     @Override
     public void handlePM(User user, String input, JDA bot, PrivateChannel channel) {
-        if (status.equals(QuizStatus.WAITING_QUESTION)) {
-            question = new QuizQuestion(99, input, null, null);
-            channel.sendMessage("Wie lautet die richtige Antwort?").queue();
-            status = QuizStatus.WAITING_QUESTION_ANSWERS;
-        } else {
-            if (status.equals(QuizStatus.WAITING_QUESTION_ANSWERS)) {
-                for (int i = 0; i < 4; i++) {
-                    if (answers.size() == i) {
-                        answers.add(new QuizAnswer(input, i == 0 ? RIGHT_ANSWER :
-                                i == 1 ? WRONG_ANSWER_1 :
-                                        i == 2 ? WRONG_ANSWER_2 :
-                                                i == 3 ? WRONG_ANSWER_3 : ""));
-                        if (i == 0) {
-                            channel.sendMessage("...und die erste falsche?").queue();
+
+        switch (status) {
+            case WAITING_QUESTION:
+                enterNewQuestionViaPM(input, channel);
+                break;
+            case WAITING_QUESTION_ANSWERS:
+                enterAnswersViaPM(user, input, channel);
+                break;
+            default:
+                final String inputLowerCase = input.toLowerCase();
+                switch (inputLowerCase) {
+                    case "abbruch":
+                        cancel(channel);
+                        break;
+                }
+        }
+    }
+
+    private void cancel(PrivateChannel channel) {
+        question = null;
+        answers = null;
+        status = QuizStatus.NONE;
+        channel.sendMessage("Aktion abgebrochen!");
+    }
+
+    private void enterAnswersViaPM(User user, String input, PrivateChannel channel) {
+        for (int i = 0; i < 4; i++) {
+            if (answers.size() == i) {
+                answers.add(new QuizAnswer(input, i == 0 ? RIGHT_ANSWER :
+                        i == 1 ? WRONG_ANSWER_1 :
+                                i == 2 ? WRONG_ANSWER_2 :
+                                        i == 3 ? WRONG_ANSWER_3 : ""));
+                if (i == 0) {
+                    channel.sendMessage("...und die erste falsche? (Abbrechen mit !abbruch hier via PM)").queue();
+                    break;
+                } else {
+                    if (i == 1) {
+                        channel.sendMessage("...und die zweite falsche? (Abbrechen mit !abbruch hier via PM)").queue();
+                        break;
+                    } else {
+                        if (i == 2) {
+                            channel.sendMessage("...und die dritte falsche? (Abbrechen mit !abbruch hier via PM)").queue();
                             break;
                         } else {
-                            if (i == 1) {
-                                channel.sendMessage("...und die zweite falsche?").queue();
-                                break;
-                            } else {
-                                if (i == 2) {
-                                    channel.sendMessage("...und die dritte falsche?").queue();
-                                    break;
-                                } else {
-                                    channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
-                                    channel.sendMessage("Danke :)").queue();
-                                    dbService.enterQuestions(user, question, answers);
-                                    status = QuizStatus.NONE;
-                                    break;
-                                }
-                            }
+                            channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
+                            channel.sendMessage("Danke :)").queue();
+                            dbService.enterQuestions(user, question, answers);
+                            status = QuizStatus.NONE;
+                            break;
                         }
                     }
                 }
             }
         }
+    }
+
+    private void enterNewQuestionViaPM(String input, PrivateChannel channel) {
+        question = new QuizQuestion(99, input, null, null);
+        channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
+        status = QuizStatus.WAITING_QUESTION_ANSWERS;
     }
 
     private void info(TextChannel channel) {
@@ -245,7 +269,6 @@ public class Quiz extends ReceiveModule {
             questionBuilder.append("Antwort 3: ").append(answers.get(2).getText()).append("\n");
             questionBuilder.append("Antwort 4: ").append(answers.get(3).getText()).append("\n");
             questionBuilder.append("Antwort 5: ").append(NO_CLUE).append("\n");
-            questionBuilder.append("Bitte gib eine Nummer ein und wähle weise...");
 
             channel.sendMessage(questionBuilder.toString()).queue();
             this.status = QuizStatus.WAITING_ANSWER;

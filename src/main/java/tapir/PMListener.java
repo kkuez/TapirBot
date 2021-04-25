@@ -14,9 +14,7 @@ public class PMListener extends TapirListener {
     @Override
     public void onPrivateMessageReceived(@NotNull PrivateMessageReceivedEvent event) {
         super.onPrivateMessageReceived(event);
-
         final UserWrapper userWrapper = doUserCheck(event.getAuthor());
-
         userWrapper.handlePM(event, getDbService(), getBot());
     }
 }
