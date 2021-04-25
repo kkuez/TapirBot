@@ -45,7 +45,7 @@ public class Quiz extends ReceiveModule {
     public void handle(User user, String message, JDA bot, TextChannel channel) {
         final String[] messages = message.split(" ");
         if (messages.length > 1 && status == QuizStatus.NONE) {
-            switch (messages[1]) {
+            switch (messages[1].toLowerCase()) {
                 case "help":
                     help(channel);
                     break;
