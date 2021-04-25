@@ -112,7 +112,7 @@ public class DBService {
                      "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
                      "from User_QuizQuestions where user=uuq.user) as points, " +
                      "count(question) as answered " +
-                     "from User_QuizQuestions uuq group by points order by points ASC")) {
+                     "from User_QuizQuestions uuq group by \"user\" order by points asc")) {
             while (rs.next()) {
                 final Quiz.RankingTableEntry rankingTableEntry =
                         new Quiz.RankingTableEntry(

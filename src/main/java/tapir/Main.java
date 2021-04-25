@@ -14,9 +14,14 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.apache.log4j.ConsoleAppender;
+import org.apache.log4j.FileAppender;
+import org.apache.log4j.PatternLayout;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
 public class Main {
-
-
     private static Properties properties;
     private static List<Long> channelIds;
     private static DBService dbService;
@@ -24,6 +29,7 @@ public class Main {
     public static void main(String[] args) throws LoginException, InterruptedException, IOException {
         setup();
         final JDA bot = setupBot();
+        final Logger logger = LoggerFactory.getLogger(Main.class);
 
         final TextChannel textChannelById = bot.getTextChannelById(channelIds.get(0));
         final Guild guild = textChannelById.getGuild();
