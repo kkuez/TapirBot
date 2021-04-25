@@ -126,7 +126,7 @@ public class DBService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        rankingTable.sort(Comparator.comparing(Quiz.RankingTableEntry::getPoints));
+        rankingTable.sort(Comparator.comparing(entry -> entry.getPoints() + entry.getCreated()));
         Collections.reverse(rankingTable);
         return rankingTable;
     }
