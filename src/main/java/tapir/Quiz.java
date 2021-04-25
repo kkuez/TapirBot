@@ -169,9 +169,10 @@ public class Quiz extends ReceiveModule {
         }
         builder.append("\n");
         //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
-        builder.append("Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen):");
-        i = 0;
+        builder.append("Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen):\n");
+        i = 1;
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
+        Collections.reverse(userScores);
         for (RankingTableEntry entry : userScores) {
             String rankAndName = i + ": " + entry.getUserName();
             builder.append(rankAndName);
@@ -181,7 +182,7 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append(entry.getRate()).append(" Rate (").append("\t")
+            builder.append(entry.getRate()).append(" Rate (")
                     .append(entry.getAnswered()).append(" Fragen beantwortet)").append("\n");
             i++;
         }
@@ -207,7 +208,7 @@ public class Quiz extends ReceiveModule {
             } else {
                 //send wrong
                 sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!\n Die richtige Antwort ist: " +
-                        answers.get(rightAnswerIndex).getText();
+                answers.get(rightAnswerIndex).getText();
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
