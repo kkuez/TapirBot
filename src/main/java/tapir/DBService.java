@@ -118,9 +118,9 @@ public class DBService {
                         new Quiz.RankingTableEntry(
                                 rs.getLong("userId"),
                                 rs.getString("userName"),
-                                rs.getInt("points") +
-                                        getQuestionsCreatedByUser(rs.getLong("userId")).size(),
-                                rs.getInt("answered"));
+                                rs.getInt("points"),
+                                rs.getInt("answered"),
+                getQuestionsCreatedByUser(rs.getLong("userId")).size());
                 rankingTable.add(rankingTableEntry);
             }
         } catch (SQLException e) {
@@ -178,4 +178,5 @@ public class DBService {
 
         return questions;
     }
+
 }

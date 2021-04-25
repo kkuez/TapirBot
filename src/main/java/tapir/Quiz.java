@@ -5,10 +5,7 @@ import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 public class Quiz extends ReceiveModule {
@@ -153,11 +150,11 @@ public class Quiz extends ReceiveModule {
     }
 
     private void info(TextChannel channel) {
-        StringBuilder builder = new StringBuilder("Rangliste nach Punkten:").append("\n");
-        final List<RankingTableEntry> userScoresPointRated = dbService.getUserScoresPointRated();
+        List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
         int i = 1;
-
-        for (RankingTableEntry entry : userScoresPointRated) {
+        StringBuilder builder = new StringBuilder("Rangliste nach Punkten:").append("\n");
+        //Point rated
+        for (RankingTableEntry entry : userScores) {
             String rankAndName = i + ": " + entry.getUserName();
             builder.append(rankAndName);
 
@@ -166,8 +163,26 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append(entry.getPoints()).append(" Punkte (").append("\t").append(entry.getAnswered())
-                    .append(" Fragen beantwortet)").append("\n");
+            builder.append(entry.getPoints() + entry.getCreated()).append(" Punkte (").append(entry.getCreated())
+                    .append(" Fragen erstellt)").append("\n");
+            i++;
+        }
+        builder.append("\n");
+        //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
+        builder.append("Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen):");
+        i = 0;
+        userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
+        for (RankingTableEntry entry : userScores) {
+            String rankAndName = i + ": " + entry.getUserName();
+            builder.append(rankAndName);
+
+            int spaces = 30 - rankAndName.length();
+            for (int j = 0; j < spaces; j++) {
+                builder.append(" ");
+            }
+
+            builder.append(entry.getRate()).append(" Rate (").append("\t")
+                    .append(entry.getAnswered()).append(" Fragen beantwortet)").append("\n");
             i++;
         }
 
@@ -192,7 +207,7 @@ public class Quiz extends ReceiveModule {
             } else {
                 //send wrong
                 sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!\n Die richtige Antwort ist: " +
-                answers.get(rightAnswerIndex).getText();
+                        answers.get(rightAnswerIndex).getText();
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
@@ -245,13 +260,23 @@ public class Quiz extends ReceiveModule {
         private String userName;
         private int points;
         private int answered;
+        private int created;
 
-        public RankingTableEntry(Long userId, String userName, int points, int answered) {
+        public RankingTableEntry(Long userId, String userName, int points, int answered, int created) {
 
             this.userId = userId;
             this.userName = userName;
             this.points = points;
             this.answered = answered;
+            this.created = created;
+        }
+
+        public float getRate() {
+            return (float) points / (float) answered;
+        }
+
+        public int getCreated() {
+            return created;
         }
 
         public int getAnswered() {
