@@ -111,7 +111,11 @@ public class Quiz extends ReceiveModule {
 
     @Override
     public void handlePM(User user, String input, JDA bot, PrivateChannel channel) {
-
+        if(input.toLowerCase().equals("abbruch")) {
+            cancel(channel);
+            return;
+        }
+        
         switch (status) {
             case WAITING_QUESTION:
                 enterNewQuestionViaPM(input, channel);
@@ -120,12 +124,7 @@ public class Quiz extends ReceiveModule {
                 enterAnswersViaPM(user, input, channel);
                 break;
             default:
-                final String inputLowerCase = input.toLowerCase();
-                switch (inputLowerCase) {
-                    case "abbruch":
-                        cancel(channel);
-                        break;
-                }
+
         }
     }
 
@@ -133,7 +132,7 @@ public class Quiz extends ReceiveModule {
         question = null;
         answers = null;
         status = QuizStatus.NONE;
-        channel.sendMessage("Aktion abgebrochen!");
+        channel.sendMessage("Aktion abgebrochen!").queue();
     }
 
     private void enterAnswersViaPM(User user, String input, PrivateChannel channel) {
