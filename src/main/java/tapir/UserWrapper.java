@@ -43,9 +43,19 @@ public class UserWrapper {
     }
 
     public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot) {
-        for(ReceiveModule module: modules.values()) {
-                module.handlePM(user, event.getMessage().getContentRaw().replace("!", ""),
-                        bot, event.getChannel());
+        final String fullWithoutAusrufezeichen = event.getMessage().getContentRaw().replace("!", "");
+        final String message = fullWithoutAusrufezeichen.split(" ")[0].toLowerCase();
+        switch (message) {
+            case "q":
+            case "quiz":
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService)).handlePM(user,
+                        fullWithoutAusrufezeichen, bot, event.getChannel());
+                break;
+            default:
+                for(ReceiveModule module: modules.values()) {
+                    module.handlePM(user, fullWithoutAusrufezeichen,
+                            bot, event.getChannel());
+                }
         }
     }
 }

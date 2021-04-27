@@ -19,6 +19,7 @@ public class Quiz extends ReceiveModule {
     public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
+    private static TextChannel MAIN_CHANNEL;
 
     public Quiz(DBService dbService) {
         this.dbService = dbService;
@@ -43,6 +44,7 @@ public class Quiz extends ReceiveModule {
 
     @Override
     public void handle(User user, String message, JDA bot, TextChannel channel) {
+        checkChannelExists(channel);
         final String[] messages = message.split(" ");
         if (messages.length > 1 && status == QuizStatus.NONE) {
             switch (messages[1].toLowerCase()) {
@@ -56,8 +58,8 @@ public class Quiz extends ReceiveModule {
                     //TODO score(user);
                     break;
                 case "new":
-                    newQuestion(channel, user);
-                    break;
+                    MAIN_CHANNEL.sendMessage(user.getName() + ", Fragen werden jetzt per !q new in dem " +
+                            "Privaten Channel gestellt hrhr...").queue();
                 default:
                     break;
             }
@@ -66,8 +68,8 @@ public class Quiz extends ReceiveModule {
                 if (isInteger(message)) {
                     checkAnswer(user, Integer.parseInt(message));
                 } else {
-                    channel.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im Fragemodus? " +
-                            "(!abbruch in einer PM zum abbrechen)").queue();
+                    MAIN_CHANNEL.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im " +
+                            "Fragemodus? " + "(!abbruch in einer PM zum abbrechen)").queue();
                 }
             } else {
                 //Question + Wait status
@@ -79,8 +81,15 @@ public class Quiz extends ReceiveModule {
         System.out.println();
     }
 
-    private void newQuestion(TextChannel channel, User user) {
-        channel.sendMessage(user.getName() + ", schreib mir bitte jetzt eine PM mit deiner Frage!").queue();
+    private void checkChannelExists(TextChannel channel) {
+        if(MAIN_CHANNEL == null) {
+            MAIN_CHANNEL = channel;
+        }
+    }
+
+    private void newQuestion(User user) {
+        String sendToUser = user.getName() + ", schreib mir bitte jetzt eine PM mit deiner Frage!";
+        user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser).queue());
         status = QuizStatus.WAITING_QUESTION;
         answers = new ArrayList<>(4);
         question = null;
@@ -89,11 +98,14 @@ public class Quiz extends ReceiveModule {
     private void help(TextChannel channel) {
         String helpText = "Willkommen zum Quizmodul des TapirBots!" +
                 "\nEs gibt folgende Befehle:" +
-                "\n\t!q oder !quiz: Gibt dir eine Frage die du noch nicht beantwortet hast" +
-                "\n\t!q info oder !quiz info: Gibt dir die aktuelle Tabelle" +
-                "\n\t!q new oder !quiz new: Gib eine neue Frage ein und kassier einen Punkt!" +
+                "\n\tAllgemeiner Channel:" +
+                "\n\t\t!q oder !quiz: Gibt dir eine Frage die du noch nicht beantwortet hast" +
+                "\n\t\t!q info oder !quiz info: Gibt dir die aktuelle Tabelle" +
+                "\n\tPrivater Channel:" +
+                "\n\t\t!q new oder !quiz new: Gib eine neue Frage ein und kassier einen Punkt!" +
+                "\n\t\t...außerdem kommt hier das Ergebnis deiner Antwort!" +
                 "\n\n Viel Spass beim Rätseln :)";
-        channel.sendMessage(helpText).queue();
+        MAIN_CHANNEL.sendMessage(helpText).queue();
     }
 
     private boolean isInteger(String message) {
@@ -113,18 +125,30 @@ public class Quiz extends ReceiveModule {
     }
 
     @Override
-    public void handlePM(User user, String input, JDA bot, PrivateChannel channel) {
-        if(input.toLowerCase().equals("abbruch")) {
+    public void handlePM(User user, String message, JDA bot, PrivateChannel channel) {
+        //TODO aufräumen, zuviele Verzweigungen, vll vereinen mit handle()
+        final String[] messages = message.split(" ");
+        if (message.toLowerCase().equals("abbruch")) {
             cancel(channel);
             return;
+        } else {
+            if ((message.startsWith("q ") || message.startsWith("quiz ")) && messages.length > 1
+                    && status == QuizStatus.NONE) {
+                switch (messages[1]) {
+                    case "new":
+                        newQuestion(user);
+                        return;
+                }
+            }
         }
-        
+
+
         switch (status) {
             case WAITING_QUESTION:
-                enterNewQuestionViaPM(input, channel);
+                enterNewQuestionViaPM(message, channel);
                 break;
             case WAITING_QUESTION_ANSWERS:
-                enterAnswersViaPM(user, input, channel);
+                enterAnswersViaPM(user, message, channel);
                 break;
             default:
 
@@ -158,7 +182,7 @@ public class Quiz extends ReceiveModule {
                             break;
                         } else {
                             channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
-                            channel.sendMessage("Danke :)").queue();
+                            MAIN_CHANNEL.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue();
                             dbService.enterQuestions(user, question, answers);
                             status = QuizStatus.NONE;
                             break;
@@ -213,7 +237,7 @@ public class Quiz extends ReceiveModule {
             i++;
         }
 
-        channel.sendMessage(builder.toString()).queue();
+        MAIN_CHANNEL.sendMessage(builder.toString()).queue();
     }
 
 
@@ -234,7 +258,7 @@ public class Quiz extends ReceiveModule {
             } else {
                 //send wrong
                 sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!\n Die richtige Antwort ist: " +
-                answers.get(rightAnswerIndex).getText();
+                        answers.get(rightAnswerIndex).getText();
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
@@ -272,10 +296,10 @@ public class Quiz extends ReceiveModule {
             questionBuilder.append("Antwort 4: ").append(answers.get(3).getText()).append("\n");
             questionBuilder.append("Antwort 5: ").append(NO_CLUE).append("\n");
 
-            channel.sendMessage(questionBuilder.toString()).queue();
+            MAIN_CHANNEL.sendMessage(questionBuilder.toString()).queue();
             this.status = QuizStatus.WAITING_ANSWER;
         } else {
-            channel.sendMessage("Sorry " + user.getName() + ", Du hast schon alle Fragen beantwortet. Warte " +
+            MAIN_CHANNEL.sendMessage("Sorry " + user.getName() + ", Du hast schon alle Fragen beantwortet. Warte " +
                     "bis es neue gibt ;)").queue();
         }
     }
