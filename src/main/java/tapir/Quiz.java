@@ -208,6 +208,11 @@ public class Quiz extends ReceiveModule {
             String rankAndName = i + ": " + entry.getUserName();
             builder.append(rankAndName);
 
+            int spaces = 30 - rankAndName.length();
+            for (int j = 0; j < spaces; j++) {
+                builder.append(" ");
+            }
+
             builder.append("*").append(entry.getPoints() + entry.getCreated()).append("* Punkte (")
                     .append(entry.getCreated()).append(" Fragen erstellt)").append("\n");
             i++;
