@@ -202,24 +202,19 @@ public class Quiz extends ReceiveModule {
     private void info(TextChannel channel) {
         List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
         int i = 1;
-        StringBuilder builder = new StringBuilder("Rangliste nach Punkten:").append("\n");
+        StringBuilder builder = new StringBuilder("**Rangliste nach** ***Punkten***:").append("\n");
         //Point rated
         for (RankingTableEntry entry : userScores) {
             String rankAndName = i + ": " + entry.getUserName();
             builder.append(rankAndName);
 
-            int spaces = 30 - rankAndName.length();
-            for (int j = 0; j < spaces; j++) {
-                builder.append(" ");
-            }
-
-            builder.append(entry.getPoints() + entry.getCreated()).append(" Punkte (").append(entry.getCreated())
-                    .append(" Fragen erstellt)").append("\n");
+            builder.append("*").append(entry.getPoints() + entry.getCreated()).append("* Punkte (")
+                    .append(entry.getCreated()).append(" Fragen erstellt)").append("\n");
             i++;
         }
         builder.append("\n");
         //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
-        builder.append("Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen):\n");
+        builder.append("**Rangliste nach** ***Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)***:\n");
         i = 1;
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
         Collections.reverse(userScores);
@@ -232,7 +227,7 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append(entry.getRate()).append(" Rate (")
+            builder.append("*").append(entry.getRate()).append("* Rate (")
                     .append(entry.getAnswered()).append(" Fragen beantwortet)").append("\n");
             i++;
         }
