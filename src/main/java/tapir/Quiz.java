@@ -98,11 +98,11 @@ public class Quiz extends ReceiveModule {
     private void help(TextChannel channel) {
         String helpText = "Willkommen zum Quizmodul des TapirBots!" +
                 "\nEs gibt folgende Befehle:" +
-                "\n\t**Allgemeiner Channel:**" +
-                "\n\t\t*!q* oder *!quiz*: Gibt dir eine Frage die du noch nicht beantwortet hast" +
-                "\n\t\t*!q info* oder *!quiz* info: Gibt dir die aktuelle Tabelle" +
-                "\n\t**Privater Channel:**" +
-                "\n\t\t*!q new* oder *!quiz new*: Gib eine neue Frage ein und kassier einen Punkt!" +
+                "\n\t__Allgemeiner Channel:__" +
+                "\n\t\t**!q** oder **!quiz**: Gibt dir eine Frage die du noch nicht beantwortet hast" +
+                "\n\t\t**!q info** oder **!quiz** info: Gibt dir die aktuelle Tabelle" +
+                "\n\t__Privater Channel:__" +
+                "\n\t\t**!q new** oder **!quiz new**: Gib eine neue Frage ein und kassier einen Punkt!" +
                 "\n\t\t...außerdem kommt hier das Ergebnis deiner Antwort!" +
                 "\n\n Viel Spass beim Rätseln :)";
         MAIN_CHANNEL.sendMessage(helpText).queue();
@@ -202,7 +202,7 @@ public class Quiz extends ReceiveModule {
     private void info(TextChannel channel) {
         List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
         int i = 1;
-        StringBuilder builder = new StringBuilder("**Rangliste nach** ***Punkten***:").append("\n");
+        StringBuilder builder = new StringBuilder("__Rangliste nach Punkten:__").append("\n");
         //Point rated
         for (RankingTableEntry entry : userScores) {
             String rankAndName = i + ": " + entry.getUserName();
@@ -213,13 +213,13 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append("*").append(entry.getPoints() + entry.getCreated()).append("* Punkte (")
+            builder.append("**").append(entry.getPoints() + entry.getCreated()).append("** Punkte (")
                     .append(entry.getCreated()).append(" Fragen erstellt)").append("\n");
             i++;
         }
         builder.append("\n");
         //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
-        builder.append("**Rangliste nach** ***Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)***:\n");
+        builder.append("__Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)__:\n");
         i = 1;
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
         Collections.reverse(userScores);
@@ -232,7 +232,7 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append("*").append(entry.getRate()).append("* Rate (")
+            builder.append("**").append(entry.getRate()).append("** Rate (")
                     .append(entry.getAnswered()).append(" Fragen beantwortet)").append("\n");
             i++;
         }
