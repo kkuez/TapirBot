@@ -65,6 +65,9 @@ public class Quiz extends ReceiveModule {
             if (status.equals(QuizStatus.WAITING_ANSWER)) {
                 if (isInteger(message)) {
                     checkAnswer(user, Integer.parseInt(message));
+                } else {
+                    channel.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im Fragemodus? " +
+                            "(!abbruch in einer PM zum abbrechen)").queue();
                 }
             } else {
                 //Question + Wait status
