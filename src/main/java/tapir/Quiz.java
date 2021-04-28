@@ -5,7 +5,9 @@ import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 
+import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class Quiz extends ReceiveModule {
@@ -19,12 +21,20 @@ public class Quiz extends ReceiveModule {
     public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
-    private static Set<TextChannel> MAIN_CHANNELS;
 
-    public Quiz(DBService dbService) {
-        MAIN_CHANNELS = new HashSet<>();
+    public Quiz(DBService dbService, JDA bot) {
         this.dbService = dbService;
         this.status = QuizStatus.NONE;
+        try(InputStream setupPropertiesStream = new FileInputStream(new File(".", "setup.properties"))) {
+            Properties properties = new Properties();
+            properties.load(setupPropertiesStream);
+            final String generalChannelNames = (String) properties.get("generalChannels");
+            final Set<TextChannel> generalChannels = Arrays.stream(generalChannelNames.split(";"))
+                    .map(channelName -> bot.getTextChannelById(channelName)).collect(Collectors.toSet());
+            setGeneralChannels(generalChannels);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -45,7 +55,6 @@ public class Quiz extends ReceiveModule {
 
     @Override
     public void handle(User user, String message, JDA bot, TextChannel channel) {
-        checkChannelExists(bot);
         final String[] messages = message.split(" ");
         if (messages.length > 1 && status == QuizStatus.NONE) {
             switch (messages[1].toLowerCase()) {
@@ -82,9 +91,6 @@ public class Quiz extends ReceiveModule {
         System.out.println();
     }
 
-    private void checkChannelExists(JDA bot) {
-        MAIN_CHANNELS.addAll(bot.getTextChannels());
-    }
 
     private void newQuestion(User user) {
         String sendToUser = user.getName() + ", schreib mir bitte jetzt eine PM mit deiner Frage!";
@@ -181,7 +187,7 @@ public class Quiz extends ReceiveModule {
                             break;
                         } else {
                             channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
-                            MAIN_CHANNELS.forEach(channel1 ->
+                            getGeneralChannels().forEach(channel1 ->
                                     channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
                             dbService.enterQuestions(user, question, answers);
                             status = QuizStatus.NONE;
@@ -335,10 +341,6 @@ public class Quiz extends ReceiveModule {
 
         public String getUserName() {
             return userName;
-        }
-
-        public Long getUserId() {
-            return userId;
         }
 
         public int getPoints() {

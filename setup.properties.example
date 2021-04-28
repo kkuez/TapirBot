@@ -1,4 +1,4 @@
 token=
-#Channels in which the bot is present. Seperate by ';'
-channels=
+#Channels in which the bot posts general Messages. Given as ChannelName, not id! Seperate by ';'
+generalChannels=
 dbPath=

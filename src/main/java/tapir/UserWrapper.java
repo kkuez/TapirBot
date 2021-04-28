@@ -29,7 +29,7 @@ public class UserWrapper {
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService)).handle(user, event.getMessage()
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, bot)).handle(user, event.getMessage()
                                 .getContentRaw(), bot, event.getChannel());
                 break;
             default:
@@ -48,7 +48,7 @@ public class UserWrapper {
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService)).handlePM(user,
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, bot)).handlePM(user,
                         fullWithoutAusrufezeichen, bot, event.getChannel());
                 break;
             default:

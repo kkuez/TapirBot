@@ -23,25 +23,16 @@ import org.slf4j.LoggerFactory;
 
 public class Main {
     private static Properties properties;
-    private static List<Long> channelIds;
     private static DBService dbService;
 
     public static void main(String[] args) throws LoginException, InterruptedException, IOException {
         setup();
         final JDA bot = setupBot();
-        final Logger logger = LoggerFactory.getLogger(Main.class);
 
-        final TextChannel textChannelById = bot.getTextChannelById(channelIds.get(0));
-        final Guild guild = textChannelById.getGuild();
-        final List<Member> members = guild.getMembers();
         bot.addEventListener(new NoPMListener(properties, dbService, bot));
         bot.addEventListener(new PMListener(properties, dbService, bot));
 
-        Scanner scanner = new Scanner(System.in);
         while(true) {
-            if(scanner.hasNextLine()){
-                textChannelById.sendMessage(scanner.nextLine()).queue();
-            }
             Thread.sleep(200);
         }
     }
@@ -58,8 +49,5 @@ public class Main {
         properties.load(setupPropertiesStream);
 
         dbService = new DBService(properties);
-
-        final String[] channels = properties.getProperty("channels").split(";");
-        channelIds = Arrays.stream(channels).map(Long::parseLong).collect(Collectors.toList());
     }
 }
