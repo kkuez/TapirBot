@@ -19,9 +19,10 @@ public class Quiz extends ReceiveModule {
     public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
-    private static TextChannel MAIN_CHANNEL;
+    private static Set<TextChannel> MAIN_CHANNELS;
 
     public Quiz(DBService dbService) {
+        MAIN_CHANNELS = new HashSet<>();
         this.dbService = dbService;
         this.status = QuizStatus.NONE;
     }
@@ -44,7 +45,7 @@ public class Quiz extends ReceiveModule {
 
     @Override
     public void handle(User user, String message, JDA bot, TextChannel channel) {
-        checkChannelExists(channel);
+        checkChannelExists(bot);
         final String[] messages = message.split(" ");
         if (messages.length > 1 && status == QuizStatus.NONE) {
             switch (messages[1].toLowerCase()) {
@@ -58,7 +59,7 @@ public class Quiz extends ReceiveModule {
                     //TODO score(user);
                     break;
                 case "new":
-                    MAIN_CHANNEL.sendMessage(user.getName() + ", Fragen werden jetzt per !q new in dem " +
+                    channel.sendMessage(user.getName() + ", Fragen werden jetzt per !q new in dem " +
                             "Privaten Channel gestellt hrhr...").queue();
                 default:
                     break;
@@ -68,7 +69,7 @@ public class Quiz extends ReceiveModule {
                 if (isInteger(message)) {
                     checkAnswer(user, Integer.parseInt(message));
                 } else {
-                    MAIN_CHANNEL.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im " +
+                    channel.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im " +
                             "Fragemodus? " + "(!abbruch in einer PM zum abbrechen)").queue();
                 }
             } else {
@@ -81,10 +82,8 @@ public class Quiz extends ReceiveModule {
         System.out.println();
     }
 
-    private void checkChannelExists(TextChannel channel) {
-        if(MAIN_CHANNEL == null) {
-            MAIN_CHANNEL = channel;
-        }
+    private void checkChannelExists(JDA bot) {
+        MAIN_CHANNELS.addAll(bot.getTextChannels());
     }
 
     private void newQuestion(User user) {
@@ -100,12 +99,12 @@ public class Quiz extends ReceiveModule {
                 "\nEs gibt folgende Befehle:" +
                 "\n\t__Allgemeiner Channel:__" +
                 "\n\t\t**!q** oder **!quiz**: Gibt dir eine Frage die du noch nicht beantwortet hast" +
-                "\n\t\t**!q info** oder **!quiz** info: Gibt dir die aktuelle Tabelle" +
+                "\n\t\t**!q info** oder **!quiz info**: Gibt dir die aktuelle Tabelle" +
                 "\n\t__Privater Channel:__" +
                 "\n\t\t**!q new** oder **!quiz new**: Gib eine neue Frage ein und kassier einen Punkt!" +
                 "\n\t\t...außerdem kommt hier das Ergebnis deiner Antwort!" +
                 "\n\n Viel Spass beim Rätseln :)";
-        MAIN_CHANNEL.sendMessage(helpText).queue();
+        channel.sendMessage(helpText).queue();
     }
 
     private boolean isInteger(String message) {
@@ -182,7 +181,8 @@ public class Quiz extends ReceiveModule {
                             break;
                         } else {
                             channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
-                            MAIN_CHANNEL.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue();
+                            MAIN_CHANNELS.forEach(channel1 ->
+                                    channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
                             dbService.enterQuestions(user, question, answers);
                             status = QuizStatus.NONE;
                             break;
@@ -237,7 +237,7 @@ public class Quiz extends ReceiveModule {
             i++;
         }
 
-        MAIN_CHANNEL.sendMessage(builder.toString()).queue();
+        channel.sendMessage(builder.toString()).queue();
     }
 
 
@@ -296,10 +296,10 @@ public class Quiz extends ReceiveModule {
             questionBuilder.append("Antwort 4: ").append(answers.get(3).getText()).append("\n");
             questionBuilder.append("Antwort 5: ").append(NO_CLUE).append("\n");
 
-            MAIN_CHANNEL.sendMessage(questionBuilder.toString()).queue();
+            channel.sendMessage(questionBuilder.toString()).queue();
             this.status = QuizStatus.WAITING_ANSWER;
         } else {
-            MAIN_CHANNEL.sendMessage("Sorry " + user.getName() + ", Du hast schon alle Fragen beantwortet. Warte " +
+            channel.sendMessage("Sorry " + user.getName() + ", Du hast schon alle Fragen beantwortet. Warte " +
                     "bis es neue gibt ;)").queue();
         }
     }
