@@ -98,7 +98,8 @@ public class Quiz extends ReceiveModule {
                 "\nEs gibt folgende Befehle:" +
                 "\n\t__Allgemeiner Channel:__" +
                 "\n\t\t**!q** oder **!quiz**: Gibt dir eine Frage die du noch nicht beantwortet hast" +
-                "\n\t\t**!q info** oder **!quiz info**: Gibt dir die aktuelle Tabelle" +
+                "\n\t\t**!q info** oder **!quiz info**: Gibt dir die aktuelle Tabelle für den Channel" +
+                "\n\t\t**!q info global** oder **!quiz info global**: Gibt dir die aktuelle Tabelle alle Channels" +
                 "\n\t__Privater Channel:__" +
                 "\n\t\t**!q new** oder **!quiz new**: Gib eine neue Frage ein und kassier einen Punkt!" +
                 "\n\t\t...außerdem kommt hier das Ergebnis deiner Antwort!" +
@@ -200,7 +201,7 @@ public class Quiz extends ReceiveModule {
 
     private void info(TextChannel channel, boolean global) {
         List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
-        channel.getJDA().getGuilds().get(0).getMembers();
+
         if(!global) {
             filterMembers(channel, userScores);
         }
