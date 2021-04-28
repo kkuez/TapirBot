@@ -193,4 +193,7 @@ public class DBService {
         return questions;
     }
 
+    public Set<Long> getKnownUsers() {
+        return knownUsers;
+    }
 }

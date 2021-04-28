@@ -200,7 +200,7 @@ public class Quiz extends ReceiveModule {
 
     private void info(TextChannel channel, boolean global) {
         List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
-
+        channel.getJDA().getGuilds().get(0).getMembers();
         if(!global) {
             filterMembers(channel, userScores);
         }
@@ -251,6 +251,8 @@ public class Quiz extends ReceiveModule {
         for(int i =0;i<userScores.size();i++) {
             if(!names.contains(userScores.get(i).getUserName())) {
                 userScores.remove(i);
+                //lower i cuz list shrinks of 1 element
+                i--;
             }
         }
     }
