@@ -7,7 +7,9 @@ import net.dv8tion.jda.api.entities.User;
 
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 public class Quiz extends ReceiveModule {
@@ -25,12 +27,21 @@ public class Quiz extends ReceiveModule {
     public Quiz(DBService dbService, JDA bot) {
         this.dbService = dbService;
         this.status = QuizStatus.NONE;
+        //TODO properties werden schon Main geholt, nach hierher durchgeben
         try(InputStream setupPropertiesStream = new FileInputStream(new File(".", "setup.properties"))) {
             Properties properties = new Properties();
             properties.load(setupPropertiesStream);
-            final String generalChannelNames = (String) properties.get("generalChannels");
-            final Set<TextChannel> generalChannels = Arrays.stream(generalChannelNames.split(";"))
-                    .map(channelName -> bot.getTextChannelById(channelName)).collect(Collectors.toSet());
+            final String generalChannelProperty = (String) properties.get("generalChannels");
+            final Set<String> generalChannelNames =
+                    Arrays.stream(generalChannelProperty.split(";")).collect(Collectors.toSet());
+
+            Set<TextChannel> generalChannels = new HashSet<>();
+            bot.getTextChannels().forEach(channel -> {
+                if(generalChannelNames.contains(channel.getName())) {
+                    generalChannels.add(channel);
+                }
+            });
+
             setGeneralChannels(generalChannels);
         } catch (IOException e) {
             e.printStackTrace();
