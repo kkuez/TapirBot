@@ -1,12 +1,14 @@
 package tapir;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class UserWrapper {
     private Map<Class, ReceiveModule> modules;
@@ -24,13 +26,13 @@ public class UserWrapper {
         return user;
     }
 
-    public void handle(GuildMessageReceivedEvent event, DBService dbService, JDA bot) {
+    public void handle(GuildMessageReceivedEvent event, DBService dbService, JDA bot, Set<TextChannel> allowedChannels) {
         final String message = event.getMessage().getContentRaw().replace("!", "").split(" ")[0].toLowerCase();
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, bot)).handle(user, event.getMessage()
-                                .getContentRaw(), bot, event.getChannel());
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels))
+                        .handle(user, event.getMessage().getContentRaw(), bot, event.getChannel());
                 break;
             default:
                 for(ReceiveModule module: modules.values()) {
@@ -42,13 +44,13 @@ public class UserWrapper {
         }
     }
 
-    public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot) {
+    public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot, Set<TextChannel> allowedChannels) {
         final String fullWithoutAusrufezeichen = event.getMessage().getContentRaw().replace("!", "");
         final String message = fullWithoutAusrufezeichen.split(" ")[0].toLowerCase();
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, bot)).handlePM(user,
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels)).handlePM(user,
                         fullWithoutAusrufezeichen, bot, event.getChannel());
                 break;
             default:

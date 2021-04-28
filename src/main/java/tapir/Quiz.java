@@ -5,11 +5,8 @@ import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 
-import java.io.*;
 import java.util.*;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 
 public class Quiz extends ReceiveModule {
@@ -24,28 +21,10 @@ public class Quiz extends ReceiveModule {
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
 
-    public Quiz(DBService dbService, JDA bot) {
+    public Quiz(DBService dbService, Set<TextChannel> generalChannels) {
         this.dbService = dbService;
         this.status = QuizStatus.NONE;
-        //TODO properties werden schon Main geholt, nach hierher durchgeben
-        try(InputStream setupPropertiesStream = new FileInputStream(new File(".", "setup.properties"))) {
-            Properties properties = new Properties();
-            properties.load(setupPropertiesStream);
-            final String generalChannelProperty = (String) properties.get("generalChannels");
-            final Set<String> generalChannelNames =
-                    Arrays.stream(generalChannelProperty.split(";")).collect(Collectors.toSet());
-
-            Set<TextChannel> generalChannels = new HashSet<>();
-            bot.getTextChannels().forEach(channel -> {
-                if(generalChannelNames.contains(channel.getName())) {
-                    generalChannels.add(channel);
-                }
-            });
-
-            setGeneralChannels(generalChannels);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        setGeneralChannels(generalChannels);
     }
 
     @Override
@@ -56,7 +35,9 @@ public class Quiz extends ReceiveModule {
                 "quiz help",
                 "q help",
                 "q info",
+                "q info global",
                 "quiz info",
+                "quiz info global",
                 "q score",
                 "quiz score",
                 "q new",
@@ -73,7 +54,8 @@ public class Quiz extends ReceiveModule {
                     help(channel);
                     break;
                 case "info":
-                    info(channel);
+                    boolean global = messages.length == 3 && messages[2].equals("global");
+                    info(channel, global);
                     break;
                 case "score":
                     //TODO score(user);
@@ -216,8 +198,13 @@ public class Quiz extends ReceiveModule {
         status = QuizStatus.WAITING_QUESTION_ANSWERS;
     }
 
-    private void info(TextChannel channel) {
+    private void info(TextChannel channel, boolean global) {
         List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
+
+        if(!global) {
+            filterMembers(channel, userScores);
+        }
+
         int i = 1;
         StringBuilder builder = new StringBuilder("__Rangliste nach Punkten:__").append("\n");
         //Point rated
@@ -255,6 +242,17 @@ public class Quiz extends ReceiveModule {
         }
 
         channel.sendMessage(builder.toString()).queue();
+    }
+
+    private void filterMembers(TextChannel channel, List<RankingTableEntry> userScores) {
+        final Set<String> names = channel.getMembers().stream()
+                .map(member -> member.getEffectiveName()).collect(Collectors.toSet());
+
+        for(int i =0;i<userScores.size();i++) {
+            if(!names.contains(userScores.get(i).getUserName())) {
+                userScores.remove(i);
+            }
+        }
     }
 
 

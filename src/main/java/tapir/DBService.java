@@ -1,11 +1,14 @@
 package tapir;
 
+import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 
 import java.io.File;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class DBService {
 
@@ -40,12 +43,20 @@ public class DBService {
         }
     }
 
-    public void handleUser(UserWrapper user) {
+    public void handleUser(UserWrapper user, Set<TextChannel> allowedChannels) {
         final long userId = getUserId(user.getUser());
         if (!knownUsers.contains(userId)) {
             try (Statement statement = getConnection().createStatement();) {
                 statement.executeUpdate(
                         "insert into User(id, name) values(" + userId + ",'" + user.getUser().getName() + "')");
+                for (TextChannel channel : allowedChannels) {
+                    final Set<Long> membersInChannel = channel.getMembers().stream().map(member -> member.getIdLong())
+                            .collect(Collectors.toSet());
+                    if (membersInChannel.contains(userId)) {
+                        statement.executeUpdate("insert into User_Channels(user, channel) " +
+                                "values(" + userId + ",'" + channel.getIdLong() + "')");
+                    }
+                }
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -106,13 +117,16 @@ public class DBService {
     public List<Quiz.RankingTableEntry> getUserScoresPointRated() {
         List<Quiz.RankingTableEntry> rankingTable = new ArrayList<>();
 
+        final String sql = "select user as userId, " +
+                    "(select name from User where id=uuq.user) as userName, " +
+                    "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
+                    "from User_QuizQuestions where user=uuq.user) as points, " +
+                    "count(question) as answered " +
+                    "from User_QuizQuestions uuq" +
+                    " group by user order by points asc";
+
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("select user as userId, " +
-                     "(select name from User where id=uuq.user) as userName, " +
-                     "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
-                     "from User_QuizQuestions where user=uuq.user) as points, " +
-                     "count(question) as answered " +
-                     "from User_QuizQuestions uuq group by user order by points asc")) {
+             ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) {
                 final Quiz.RankingTableEntry rankingTableEntry =
                         new Quiz.RankingTableEntry(
@@ -120,7 +134,7 @@ public class DBService {
                                 rs.getString("userName"),
                                 rs.getInt("points"),
                                 rs.getInt("answered"),
-                getQuestionsCreatedByUser(rs.getLong("userId")).size());
+                                getQuestionsCreatedByUser(rs.getLong("userId")).size());
                 rankingTable.add(rankingTableEntry);
             }
         } catch (SQLException e) {
@@ -152,7 +166,7 @@ public class DBService {
 
     /**
      * Gets questions which where created by the user
-     * */
+     */
     public List<QuizQuestion> getQuestionsCreatedByUser(long userId) {
         List<QuizQuestion> questions = new ArrayList<>();
         try (Statement statement = getConnection().createStatement();
