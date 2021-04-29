@@ -25,13 +25,26 @@ public class Main {
         final JDA bot = setupBot();
 
         final Set<TextChannel> allowedChannels = getAllowedChannels(bot);
+        final Set<Long> userNotAllowedToAsk = getUserNotAllowedToAsk();
 
-        bot.addEventListener(new NoPMListener(properties, dbService, bot, allowedChannels));
-        bot.addEventListener(new PMListener(properties, dbService, bot, allowedChannels));
+        bot.addEventListener(new NoPMListener(properties, dbService, bot, allowedChannels, userNotAllowedToAsk));
+        bot.addEventListener(new PMListener(properties, dbService, bot, allowedChannels, userNotAllowedToAsk));
 
         while(true) {
             Thread.sleep(200);
         }
+    }
+
+    private static Set<Long> getUserNotAllowedToAsk() {
+        final String usersNotAllowedToAsk = (String) properties.get("userNotAllowedToAsk");
+        Set<Long> usersNotAllowedToAskSet;
+        if(!usersNotAllowedToAsk.equals("")) {
+            usersNotAllowedToAskSet = Arrays.stream((usersNotAllowedToAsk).split(";"))
+                    .map(longAsString -> Long.parseLong(longAsString)).collect(Collectors.toSet());
+        } else {
+            usersNotAllowedToAskSet = new HashSet<>();
+        }
+        return usersNotAllowedToAskSet;
     }
 
     private static Set<TextChannel> getAllowedChannels(JDA bot) {

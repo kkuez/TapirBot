@@ -26,12 +26,14 @@ public class UserWrapper {
         return user;
     }
 
-    public void handle(GuildMessageReceivedEvent event, DBService dbService, JDA bot, Set<TextChannel> allowedChannels) {
+    public void handle(GuildMessageReceivedEvent event, DBService dbService, JDA bot, Set<TextChannel> allowedChannels,
+                       Set<Long> userNotAllowedToAsk) {
         final String message = event.getMessage().getContentRaw().replace("!", "").split(" ")[0].toLowerCase();
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels))
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels,
+                        userNotAllowedToAsk))
                         .handle(user, event.getMessage().getContentRaw(), bot, event.getChannel());
                 break;
             default:
@@ -44,13 +46,15 @@ public class UserWrapper {
         }
     }
 
-    public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot, Set<TextChannel> allowedChannels) {
+    public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot,
+                         Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk) {
         final String fullWithoutAusrufezeichen = event.getMessage().getContentRaw().replace("!", "");
         final String message = fullWithoutAusrufezeichen.split(" ")[0].toLowerCase();
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels)).handlePM(user,
+                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels,
+                        userNotAllowedToAsk)).handlePM(user,
                         fullWithoutAusrufezeichen, bot, event.getChannel());
                 break;
             default:

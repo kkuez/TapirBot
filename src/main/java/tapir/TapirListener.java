@@ -13,16 +13,19 @@ import java.util.Set;
 public abstract class TapirListener extends ListenerAdapter {
 
     private final Properties properties;
+    private final Set<Long> userNotAllowedToAsk;
     private JDA bot;
     private Set<TextChannel> allowedChannels;
     private final DBService dbService;
     private static Map<String, UserWrapper> userWrapperMap = new HashMap<String, UserWrapper>();
 
-    public TapirListener(Properties properties, DBService dbService, JDA bot, Set<TextChannel> allowedChannels) {
+    public TapirListener(Properties properties, DBService dbService, JDA bot, Set<TextChannel> allowedChannels,
+                         Set<Long> userNotAllowedToAsk) {
         this.dbService = dbService;
         this.properties = properties;
         this.bot = bot;
         this.allowedChannels = allowedChannels;
+        this.userNotAllowedToAsk = userNotAllowedToAsk;
     }
 
     /**
@@ -38,6 +41,10 @@ public abstract class TapirListener extends ListenerAdapter {
 
     public Properties getProperties() {
         return properties;
+    }
+
+    public Set<Long> getUserNotAllowedToAsk() {
+         return userNotAllowedToAsk;
     }
 
     public JDA getBot() {

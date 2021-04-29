@@ -1,4 +1,6 @@
 token=
 #Channels in which the bot posts general Messages. Given as ChannelName, not id! Seperate by ';'
 generalChannels=
+#Users which are not allowed to ask questions, as long!
+userNotAllowedToAsk=
 dbPath=

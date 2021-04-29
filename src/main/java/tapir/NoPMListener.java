@@ -10,8 +10,9 @@ import java.util.Set;
 
 public class NoPMListener extends TapirListener {
 
-    public NoPMListener(Properties properties, DBService dbService, JDA bot, Set<TextChannel> allowedChannels) {
-        super(properties, dbService, bot, allowedChannels);
+    public NoPMListener(Properties properties, DBService dbService, JDA bot, Set<TextChannel> allowedChannels,
+                        Set<Long> userNotAllowedToAsk) {
+        super(properties, dbService, bot, allowedChannels, userNotAllowedToAsk);
     }
 
     @Override
@@ -19,6 +20,6 @@ public class NoPMListener extends TapirListener {
         String messageRaw = event.getMessage().getContentDisplay();
         if(!messageRaw.startsWith("!")) { return; }
         final UserWrapper userWrapper = doUserCheck(event.getAuthor());
-        userWrapper.handle(event, getDbService(), getBot(), getAllowedChannels());
+        userWrapper.handle(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
     }
 }

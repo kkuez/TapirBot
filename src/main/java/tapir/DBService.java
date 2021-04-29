@@ -49,14 +49,6 @@ public class DBService {
             try (Statement statement = getConnection().createStatement();) {
                 statement.executeUpdate(
                         "insert into User(id, name) values(" + userId + ",'" + user.getUser().getName() + "')");
-                for (TextChannel channel : allowedChannels) {
-                    final Set<Long> membersInChannel = channel.getMembers().stream().map(member -> member.getIdLong())
-                            .collect(Collectors.toSet());
-                    if (membersInChannel.contains(userId)) {
-                        statement.executeUpdate("insert into User_Channels(user, channel) " +
-                                "values(" + userId + ",'" + channel.getIdLong() + "')");
-                    }
-                }
             } catch (SQLException e) {
                 e.printStackTrace();
             }

@@ -20,10 +20,12 @@ public class Quiz extends ReceiveModule {
     public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
     public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
     public static String NO_CLUE = "Keine Ahnung!";
+    private static Set<Long> userNotAllowedToAsk;
 
-    public Quiz(DBService dbService, Set<TextChannel> generalChannels) {
+    public Quiz(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
         this.dbService = dbService;
         this.status = QuizStatus.NONE;
+        this.userNotAllowedToAsk = userNotAllowedToAsk;
         setGeneralChannels(generalChannels);
     }
 
@@ -86,7 +88,12 @@ public class Quiz extends ReceiveModule {
 
 
     private void newQuestion(User user) {
-        String sendToUser = user.getName() + ", schreib mir bitte jetzt eine PM mit deiner Frage!";
+        if(userNotAllowedToAsk.contains(user.getIdLong())) {
+            return;
+        }
+
+        String sendToUser = user.getName() + ", schreib mir bitte jetzt eine PM mit deiner Frage! (Abbrechen mit" +
+                " !abbruch)";
         user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser).queue());
         status = QuizStatus.WAITING_QUESTION;
         answers = new ArrayList<>(4);
@@ -99,7 +106,7 @@ public class Quiz extends ReceiveModule {
                 "\n\t__Allgemeiner Channel:__" +
                 "\n\t\t**!q** oder **!quiz**: Gibt dir eine Frage die du noch nicht beantwortet hast" +
                 "\n\t\t**!q info** oder **!quiz info**: Gibt dir die aktuelle Tabelle für den Channel" +
-                "\n\t\t**!q info global** oder **!quiz info global**: Gibt dir die aktuelle Tabelle alle Channels" +
+                "\n\t\t**!q info global** oder **!quiz info global**: Gibt dir die aktuelle Tabelle aller Channels" +
                 "\n\t__Privater Channel:__" +
                 "\n\t\t**!q new** oder **!quiz new**: Gib eine neue Frage ein und kassier einen Punkt!" +
                 "\n\t\t...außerdem kommt hier das Ergebnis deiner Antwort!" +
