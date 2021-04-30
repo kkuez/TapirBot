@@ -110,6 +110,11 @@ public class Quiz extends ReceiveModule {
                 "\n\t__Privater Channel:__" +
                 "\n\t\t**!q new** oder **!quiz new**: Gib eine neue Frage ein und kassier einen Punkt!" +
                 "\n\t\t...außerdem kommt hier das Ergebnis deiner Antwort!" +
+                "\n\t__Punktevergabe:__" +
+                "\n\t\t**3 Punkte**: \tRichtige Antwort" +
+                "\n\t\t**1 Punkt**: \tErstellen einer Frage" +
+                "\n\t\t**0 Punkte**: \t!5 (Keine Ahnung-Antwort)" +
+                "\n\t\t**-2 Punkte**: \tFalsche Antwort" +
                 "\n\n Viel Spass beim Rätseln :)";
         channel.sendMessage(helpText).queue();
     }
