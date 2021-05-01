@@ -8,10 +8,7 @@ import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 
 import javax.security.auth.login.LoginException;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -25,13 +22,41 @@ public class Main {
         final JDA bot = setupBot();
 
         final Set<TextChannel> allowedChannels = getAllowedChannels(bot);
-        final Set<Long> userNotAllowedToAsk = getUserNotAllowedToAsk();
+        Set<Long> userNotAllowedToAsk = getUserNotAllowedToAsk();
 
         bot.addEventListener(new NoPMListener(properties, dbService, bot, allowedChannels, userNotAllowedToAsk));
         bot.addEventListener(new PMListener(properties, dbService, bot, allowedChannels, userNotAllowedToAsk));
 
-        while(true) {
-            Thread.sleep(200);
+        try(Scanner scanner = new Scanner(System.in);)
+        {
+            while(true) {
+                if(scanner.hasNextLine()) {
+                    String line = scanner.nextLine();
+                    final String[] cmds = line.split(" ");
+                    if(cmds.length > 1) {
+                        switch (cmds[0].toLowerCase()) {
+                            case "noask":
+                                final Map<String, String> userInfo = dbService.getUserInfo(cmds[1]);
+                                userNotAllowedToAsk = new HashSet<>();
+                                userNotAllowedToAsk.add(Long.parseLong(userInfo.get("id")));
+                                for(String userIdAsString: ((String) properties.get("userNotAllowedToAsk")).split(";")) {
+                                    if(!userIdAsString.equals("")) {
+                                        userNotAllowedToAsk.add(Long.parseLong(userIdAsString));
+                                    }
+                                }
+
+                                String replaceString = userNotAllowedToAsk.stream().map(userId -> userId + ";").collect(Collectors.joining());
+                                properties.replace("userNotAllowedToAsk", replaceString);
+                                properties.store(new FileOutputStream(new File(".", "setup.properties")),"");
+                                break;
+                            case "delque":
+                                dbService.deleteQuestionWhereLike(line.replace(cmds[0] + " ", ""));
+                                break;
+                            default:
+                        }
+                    }
+                }
+            }
         }
     }
 

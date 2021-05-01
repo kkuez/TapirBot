@@ -137,7 +137,6 @@ public class Quiz extends ReceiveModule {
 
     @Override
     public void handlePM(User user, String message, JDA bot, PrivateChannel channel) {
-        //TODO aufräumen, zuviele Verzweigungen, vll vereinen mit handle()
         final String[] messages = message.split(" ");
         if (message.toLowerCase().equals("abbruch")) {
             cancel(channel);

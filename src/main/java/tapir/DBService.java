@@ -1,6 +1,5 @@
 package tapir;
 
-import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
@@ -8,7 +7,6 @@ import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DBService {
 
@@ -187,5 +185,27 @@ public class DBService {
 
     public Set<Long> getKnownUsers() {
         return knownUsers;
+    }
+
+    public void deleteQuestionWhereLike(String whereLike) {
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate("delete from QuizQuestions where text like '%" + whereLike + "%'");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Map<String, String> getUserInfo(String cmd) {
+        Map<String, String> userInfo = new HashMap<>(2);
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs = statement.executeQuery("Select * from User where name='" + cmd + "'")) {
+            while (rs.next()) {
+                userInfo.put("name", rs.getString("name"));
+                userInfo.put("id", rs.getLong("id") + "");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return userInfo;
     }
 }
