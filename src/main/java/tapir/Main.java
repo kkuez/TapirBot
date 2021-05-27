@@ -52,6 +52,9 @@ public class Main {
                             case "delque":
                                 dbService.deleteQuestionWhereLike(line.replace(cmds[0] + " ", ""));
                                 break;
+                            case "harvest":
+
+                                break;
                             default:
                         }
                     }

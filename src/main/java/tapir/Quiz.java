@@ -218,10 +218,14 @@ public class Quiz extends ReceiveModule {
         }
 
         int i = 1;
-        StringBuilder builder = new StringBuilder("__Rangliste nach Punkten:__").append("\n");
+        int amountOfQuestions = 0;
+        String toReplace = "%%";
+        StringBuilder builder = new StringBuilder(":medal:__Rangliste nach Punkten (Es gibt %% Fragen):__").append("\n");
         //Point rated
         for (RankingTableEntry entry : userScores) {
-            String rankAndName = i + ": " + entry.getUserName();
+            String rank = getRank(i);
+
+            String rankAndName = rank + ": " + entry.getUserName();
             builder.append(rankAndName);
 
             int spaces = 30 - rankAndName.length();
@@ -229,18 +233,21 @@ public class Quiz extends ReceiveModule {
                 builder.append(" ");
             }
 
-            builder.append("**").append(entry.getPoints() + entry.getCreated()).append("** Punkte (")
-                    .append(entry.getCreated()).append(" Fragen erstellt)").append("\n");
+            final int createdByUser = entry.getCreated();
+            builder.append("**").append(entry.getPoints() + createdByUser).append("** Punkte (")
+                    .append(createdByUser).append(" Fragen erstellt)").append("\n");
+            amountOfQuestions += createdByUser;
             i++;
         }
         builder.append("\n");
         //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
-        builder.append("__Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)__:\n");
+        builder.append(":military_medal:__Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)__:\n");
         i = 1;
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
         Collections.reverse(userScores);
         for (RankingTableEntry entry : userScores) {
-            String rankAndName = i + ": " + entry.getUserName();
+            String rank = getRank(i);
+            String rankAndName = rank + ": " + entry.getUserName();
             builder.append(rankAndName);
 
             int spaces = 30 - rankAndName.length();
@@ -253,7 +260,21 @@ public class Quiz extends ReceiveModule {
             i++;
         }
 
-        channel.sendMessage(builder.toString()).queue();
+        final String tableText = builder.toString().replace(toReplace, amountOfQuestions + "");
+        channel.sendMessage(tableText).queue();
+    }
+
+    private String getRank(int i) {
+        switch (i) {
+            case 1:
+                return ":first_place:";
+            case 2:
+                return ":second_place:";
+            case 3:
+                return  ":third_place:";
+            default:
+                return i + "";
+        }
     }
 
     private void filterMembers(TextChannel channel, List<RankingTableEntry> userScores) {
