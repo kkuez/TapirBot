@@ -220,7 +220,7 @@ public class Quiz extends ReceiveModule {
         int i = 1;
         int amountOfQuestions = 0;
         String toReplace = "%%";
-        StringBuilder builder = new StringBuilder(":medal:__Rangliste nach Punkten (Es gibt %% Fragen):__").append("\n");
+        StringBuilder builder = new StringBuilder("__Rangliste nach Punkten (Es gibt %% Fragen):__").append("\n");
         //Point rated
         for (RankingTableEntry entry : userScores) {
             String rank = getRank(i);
@@ -228,20 +228,15 @@ public class Quiz extends ReceiveModule {
             String rankAndName = rank + ": " + entry.getUserName();
             builder.append(rankAndName);
 
-            int spaces = 30 - rankAndName.length();
-            for (int j = 0; j < spaces; j++) {
-                builder.append(" ");
-            }
-
             final int createdByUser = entry.getCreated();
-            builder.append("**").append(entry.getPoints() + createdByUser).append("** Punkte (")
+            builder.append("\t\t**").append(entry.getPoints() + createdByUser).append("** Punkte (")
                     .append(createdByUser).append(" Fragen erstellt)").append("\n");
             amountOfQuestions += createdByUser;
             i++;
         }
         builder.append("\n");
         //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
-        builder.append(":military_medal:__Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)__:\n");
+        builder.append("__Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)__:\n");
         i = 1;
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
         Collections.reverse(userScores);
@@ -250,12 +245,7 @@ public class Quiz extends ReceiveModule {
             String rankAndName = rank + ": " + entry.getUserName();
             builder.append(rankAndName);
 
-            int spaces = 30 - rankAndName.length();
-            for (int j = 0; j < spaces; j++) {
-                builder.append(" ");
-            }
-
-            builder.append("**").append(entry.getRate()).append("** Rate (")
+            builder.append("\t\t**").append(entry.getRate()).append("** Rate (")
                     .append(entry.getAnswered()).append(" Fragen beantwortet)").append("\n");
             i++;
         }
