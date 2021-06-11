@@ -40,8 +40,6 @@ public class Quiz extends ReceiveModule {
                 "q info global",
                 "quiz info",
                 "quiz info global",
-                "q score",
-                "quiz score",
                 "q new",
                 "quiz new"
         );
@@ -58,9 +56,6 @@ public class Quiz extends ReceiveModule {
                 case "info":
                     boolean global = messages.length == 3 && messages[2].equals("global");
                     info(channel, global);
-                    break;
-                case "score":
-                    //TODO score(user);
                     break;
                 case "new":
                     channel.sendMessage(user.getName() + ", Fragen werden jetzt per !q new in dem " +
