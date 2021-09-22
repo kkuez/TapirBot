@@ -1,12 +1,12 @@
 package tapir;
 
+import java.util.Properties;
+import java.util.Set;
+import javax.annotation.Nonnull;
+
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.Properties;
-import java.util.Set;
 
 public class PMListener extends TapirListener {
 
@@ -16,7 +16,7 @@ public class PMListener extends TapirListener {
     }
 
     @Override
-    public void onPrivateMessageReceived(@NotNull PrivateMessageReceivedEvent event) {
+    public void onPrivateMessageReceived(@Nonnull PrivateMessageReceivedEvent event) {
         super.onPrivateMessageReceived(event);
         final UserWrapper userWrapper = doUserCheck(event.getAuthor());
         userWrapper.handlePM(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());

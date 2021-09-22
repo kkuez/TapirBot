@@ -4,9 +4,10 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
-import javax.annotation.Nonnull;
 import java.util.Properties;
 import java.util.Set;
+import javax.annotation.Nonnull;
+
 
 public class NoPMListener extends TapirListener {
 

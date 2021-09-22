@@ -69,7 +69,7 @@ public class Quiz extends ReceiveModule {
                     checkAnswer(user, Integer.parseInt(message));
                 } else {
                     channel.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im " +
-                            "Fragemodus? " + "(!abbruch in einer PM zum abbrechen)").queue();
+                            "Fragemodus? (!abbruch in einer PM zum abbrechen)").queue();
                 }
             } else {
                 //Question + Wait status
@@ -263,11 +263,11 @@ public class Quiz extends ReceiveModule {
     }
 
     private void filterMembers(TextChannel channel, List<RankingTableEntry> userScores) {
-        final Set<String> names = channel.getMembers().stream()
-                .map(member -> member.getEffectiveName()).collect(Collectors.toSet());
+        final Set<Long> memberInChanIds = channel.getMembers().stream()
+                .map(member -> member.getIdLong()).collect(Collectors.toSet());
 
         for(int i =0;i<userScores.size();i++) {
-            if(!names.contains(userScores.get(i).getUserName())) {
+            if(!memberInChanIds.contains(userScores.get(i).getUserId())) {
                 userScores.remove(i);
                 //lower i cuz list shrinks of 1 element
                 i--;
@@ -374,6 +374,10 @@ public class Quiz extends ReceiveModule {
 
         public int getPoints() {
             return points;
+        }
+
+        public Long getUserId() {
+            return userId;
         }
     }
 }
