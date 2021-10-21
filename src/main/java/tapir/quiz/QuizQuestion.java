@@ -1,4 +1,4 @@
-package tapir;
+package tapir.quiz;
 
 import java.util.List;
 

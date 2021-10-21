@@ -1,15 +1,17 @@
-package tapir;
+package tapir.quiz;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import tapir.DBService;
+import tapir.ReceiveModule;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 
-public class Quiz extends ReceiveModule {
+public class QuizModule extends ReceiveModule {
 
     private final DBService dbService;
     private QuizStatus status;
@@ -22,7 +24,7 @@ public class Quiz extends ReceiveModule {
     public static String NO_CLUE = "Keine Ahnung!";
     private static Set<Long> userNotAllowedToAsk;
 
-    public Quiz(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
+    public QuizModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
         this.dbService = dbService;
         this.status = QuizStatus.NONE;
         this.userNotAllowedToAsk = userNotAllowedToAsk;
@@ -340,7 +342,7 @@ public class Quiz extends ReceiveModule {
     }
 
 
-    static class RankingTableEntry {
+    public static class RankingTableEntry {
         private Long userId;
         private String userName;
         private int points;

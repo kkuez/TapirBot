@@ -18,9 +18,16 @@ public class NoPMListener extends TapirListener {
 
     @Override
     public void onGuildMessageReceived(@Nonnull GuildMessageReceivedEvent event) {
-        String messageRaw = event.getMessage().getContentDisplay();
-        if(!messageRaw.startsWith("!")) { return; }
-        final UserWrapper userWrapper = doUserCheck(event.getAuthor());
-        userWrapper.handle(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
+        try {
+            String messageRaw = event.getMessage().getContentDisplay();
+            if (!messageRaw.startsWith("!")) {
+                return;
+            }
+            final UserWrapper userWrapper = doUserCheck(event.getAuthor());
+            userWrapper.handle(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
+        } catch (Exception e) {
+            event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :(\n@kkuez");
+            e.printStackTrace();
+        }
     }
 }

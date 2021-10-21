@@ -5,6 +5,7 @@ import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
+import tapir.quiz.QuizModule;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +33,7 @@ public class UserWrapper {
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels,
+                modules.computeIfAbsent(QuizModule.class, quizClass -> new QuizModule(dbService, allowedChannels,
                         userNotAllowedToAsk))
                         .handle(user, event.getMessage().getContentRaw(), bot, event.getChannel());
                 break;
@@ -53,7 +54,7 @@ public class UserWrapper {
         switch (message) {
             case "q":
             case "quiz":
-                modules.computeIfAbsent(Quiz.class, quizClass -> new Quiz(dbService, allowedChannels,
+                modules.computeIfAbsent(QuizModule.class, quizClass -> new QuizModule(dbService, allowedChannels,
                         userNotAllowedToAsk)).handlePM(user,
                         fullWithoutAusrufezeichen, bot, event.getChannel());
                 break;

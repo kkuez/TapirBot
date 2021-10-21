@@ -35,7 +35,7 @@ public abstract class TapirListener extends ListenerAdapter {
      * @return*/
     public UserWrapper doUserCheck(User author) {
         final UserWrapper userWrapper = userWrapperMap.computeIfAbsent(author.getId(), id -> new UserWrapper(author));
-        dbService.handleUser(userWrapper, allowedChannels);
+        dbService.handleUser(userWrapper);
         return userWrapper;
     }
 

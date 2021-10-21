@@ -18,7 +18,12 @@ public class PMListener extends TapirListener {
     @Override
     public void onPrivateMessageReceived(@Nonnull PrivateMessageReceivedEvent event) {
         super.onPrivateMessageReceived(event);
-        final UserWrapper userWrapper = doUserCheck(event.getAuthor());
-        userWrapper.handlePM(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
+        try {
+            final UserWrapper userWrapper = doUserCheck(event.getAuthor());
+            userWrapper.handlePM(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
+        } catch (Exception e) {
+            event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :( Sag @kkuez Bescheid!");
+            e.printStackTrace();
+        }
     }
 }

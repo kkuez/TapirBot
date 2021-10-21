@@ -1,8 +1,11 @@
 package tapir;
 
-import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
+import tapir.exception.TapirException;
+import tapir.quiz.QuizModule;
+import tapir.quiz.QuizAnswer;
+import tapir.quiz.QuizQuestion;
 
 import java.io.File;
 import java.sql.*;
@@ -15,7 +18,7 @@ public class DBService {
     private SQLiteConnectionPoolDataSource poolDataSource;
 
     public DBService(Properties properties) {
-        dbPath = new File(properties.get("dbPath").toString()).getAbsolutePath();
+        dbPath = new File(properties.get("dbPath").toString().replace("\"", "")).getAbsolutePath();
         readUsers();
         try {
             Class.forName("org.sqlite.JDBC");
@@ -37,18 +40,18 @@ public class DBService {
                 knownUsers.add(rs.getLong("id"));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not read Users!", e);
         }
     }
 
-    public void handleUser(UserWrapper user, Set<TextChannel> allowedChannels) {
+    public void handleUser(UserWrapper user) {
         final long userId = getUserId(user.getUser());
         if (!knownUsers.contains(userId)) {
             try (Statement statement = getConnection().createStatement();) {
                 statement.executeUpdate(
                         "insert into User(id, name) values(" + userId + ",'" + user.getUser().getName() + "')");
             } catch (SQLException e) {
-                e.printStackTrace();
+                throw new TapirException("Could not handle Users!", e);
             }
 
             knownUsers.add(userId);
@@ -67,10 +70,10 @@ public class DBService {
                      "and uqq.user=" + userId + ") and not qq.user=" + userId)) {
             while (rs.next()) {
                 List<QuizAnswer> answers = new ArrayList<>(4);
-                answers.add(new QuizAnswer(rs.getString(Quiz.RIGHT_ANSWER), Quiz.RIGHT_ANSWER));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_1), Quiz.WRONG_ANSWER_1));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_2), Quiz.WRONG_ANSWER_2));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_3), Quiz.WRONG_ANSWER_3));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.RIGHT_ANSWER), QuizModule.RIGHT_ANSWER));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_1), QuizModule.WRONG_ANSWER_1));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
 
                 QuizQuestion question = new QuizQuestion(
                         rs.getInt("id"),
@@ -81,7 +84,7 @@ public class DBService {
                 questions.add(question);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get questions for user " + user.getIdLong(), e);
         }
         return questions;
     }
@@ -100,12 +103,12 @@ public class DBService {
                     "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId
                             + "," + questionId + ")");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could send answer to user " + userId, e);
         }
     }
 
-    public List<Quiz.RankingTableEntry> getUserScoresPointRated() {
-        List<Quiz.RankingTableEntry> rankingTable = new ArrayList<>();
+    public List<QuizModule.RankingTableEntry> getUserScoresPointRated() {
+        List<QuizModule.RankingTableEntry> rankingTable = new ArrayList<>();
 
         final String sql = "select user as userId, " +
                     "(select name from User where id=uuq.user) as userName, " +
@@ -118,8 +121,8 @@ public class DBService {
         try (Statement statement = getConnection().createStatement();
              ResultSet rs = statement.executeQuery(sql)) {
             while (rs.next()) {
-                final Quiz.RankingTableEntry rankingTableEntry =
-                        new Quiz.RankingTableEntry(
+                final QuizModule.RankingTableEntry rankingTableEntry =
+                        new QuizModule.RankingTableEntry(
                                 rs.getLong("userId"),
                                 rs.getString("userName"),
                                 rs.getInt("points"),
@@ -128,7 +131,7 @@ public class DBService {
                 rankingTable.add(rankingTableEntry);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get UserScores!", e);
         }
         rankingTable.sort(Comparator.comparing(entry -> entry.getPoints() + entry.getCreated()));
         Collections.reverse(rankingTable);
@@ -146,7 +149,7 @@ public class DBService {
                             mangleChars(answers.get(3).getText()) + "'," +
                             user.getIdLong() + ")");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not enter question for user " + user.getIdLong(), e);
         }
     }
 
@@ -163,10 +166,10 @@ public class DBService {
              ResultSet rs = statement.executeQuery("Select * from QuizQuestions where user=" + userId)) {
             while (rs.next()) {
                 List<QuizAnswer> answers = new ArrayList<>(4);
-                answers.add(new QuizAnswer(rs.getString(Quiz.RIGHT_ANSWER), Quiz.RIGHT_ANSWER));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_1), Quiz.WRONG_ANSWER_1));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_2), Quiz.WRONG_ANSWER_2));
-                answers.add(new QuizAnswer(rs.getString(Quiz.WRONG_ANSWER_3), Quiz.WRONG_ANSWER_3));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.RIGHT_ANSWER), QuizModule.RIGHT_ANSWER));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_1), QuizModule.WRONG_ANSWER_1));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
 
                 QuizQuestion question = new QuizQuestion(
                         rs.getInt("id"),
@@ -177,7 +180,7 @@ public class DBService {
                 questions.add(question);
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get questions of user " + userId, e);
         }
 
         return questions;
@@ -191,7 +194,7 @@ public class DBService {
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate("delete from QuizQuestions where text like '%" + whereLike + "%'");
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not delete questions where like " + whereLike, e);
         }
     }
 
@@ -204,7 +207,7 @@ public class DBService {
                 userInfo.put("id", rs.getLong("id") + "");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get info for user " + cmd, e);
         }
         return userInfo;
     }

@@ -1,4 +1,4 @@
-package tapir;
+package tapir.quiz;
 
 public class QuizAnswer {
     private String text;
@@ -14,7 +14,7 @@ public class QuizAnswer {
     }
 
     public boolean isCorrect() {
-        return column.equals(Quiz.RIGHT_ANSWER);
+        return column.equals(QuizModule.RIGHT_ANSWER);
     }
 
     public String getColumn() {
