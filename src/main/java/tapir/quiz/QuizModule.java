@@ -217,7 +217,7 @@ public class QuizModule extends ReceiveModule {
         int i = 1;
         int amountOfQuestions = 0;
         String toReplace = "%%";
-        StringBuilder builder = new StringBuilder("__Rangliste nach Punkten (Es gibt %% Fragen):__").append("\n");
+        StringBuilder builder = new StringBuilder("__Rangliste nach Punkten:__\n*(Es gibt %% Fragen)*").append("\n");
         //Point rated
         for (RankingTableEntry entry : userScores) {
             String rank = getRank(i);
@@ -233,11 +233,15 @@ public class QuizModule extends ReceiveModule {
         }
         builder.append("\n");
         //Rate rated, whole new algoryth, less performant but better overview. Some methods will be called twice
-        builder.append("__Rangliste nach Rate (Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen)__:\n");
+        builder.append("__Rangliste nach Rate:__\n*(Punkte ohne erstellte Fragen / Anzahl Beantwortete Fragen, " +
+                "ab 10 beantwortete Fragen)*\n");
         i = 1;
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
         Collections.reverse(userScores);
         for (RankingTableEntry entry : userScores) {
+            if(entry.getAnswered() < 10) {
+                continue;
+            }
             String rank = getRank(i);
             String rankAndName = rank + ": " + entry.getUserName();
             builder.append(rankAndName);
