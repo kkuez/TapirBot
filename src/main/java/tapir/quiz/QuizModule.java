@@ -1,9 +1,16 @@
 package tapir.quiz;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.MessageBuilder;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.Event;
+import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.components.Button;
+import net.dv8tion.jda.api.interactions.components.Component;
 import tapir.DBService;
 import tapir.ReceiveModule;
 
@@ -17,11 +24,13 @@ public class QuizModule extends ReceiveModule {
     private QuizStatus status;
     private QuizQuestion question;
     private List<QuizAnswer> answers;
-    public static String RIGHT_ANSWER = "Right_Answer";
-    public static String WRONG_ANSWER_1 = "Wrong_Answer_1";
-    public static String WRONG_ANSWER_2 = "Wrong_Answer_2";
-    public static String WRONG_ANSWER_3 = "Wrong_Answer_3";
-    public static String NO_CLUE = "Keine Ahnung!";
+    public static final String RIGHT_ANSWER = "Right_Answer";
+    public static final String WRONG_ANSWER_1 = "Wrong_Answer_1";
+    public static final String WRONG_ANSWER_2 = "Wrong_Answer_2";
+    public static final String WRONG_ANSWER_3 = "Wrong_Answer_3";
+    public static final String NO_CLUE = "Keine Ahnung!";
+    public static final String QUIZ = "Quiz";
+    public static final String MESSAGE_SEPERATOR = " ";
     private static Set<Long> userNotAllowedToAsk;
 
     public QuizModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
@@ -48,8 +57,8 @@ public class QuizModule extends ReceiveModule {
     }
 
     @Override
-    public void handle(User user, String message, JDA bot, TextChannel channel) {
-        final String[] messages = message.split(" ");
+    public void handle(User user, String messageContentRaw, TextChannel channel, Optional<Event> event) {
+        final String[] messages = messageContentRaw.split(MESSAGE_SEPERATOR);
         if (messages.length > 1 && status == QuizStatus.NONE) {
             switch (messages[1].toLowerCase()) {
                 case "help":
@@ -66,17 +75,25 @@ public class QuizModule extends ReceiveModule {
                     break;
             }
         } else {
-            if (status.equals(QuizStatus.WAITING_ANSWER)) {
-                if (isInteger(message)) {
-                    checkAnswer(user, Integer.parseInt(message));
+            if (status.equals(QuizStatus.WAITING_ANSWER) && messages.length >= 1) {
+                final String numberString = messages[messages.length - 1];
+                if (isInteger(numberString)) {
+                    checkAnswer(user, Integer.parseInt(numberString));
+                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                    final String questionAfterTrim = buttonClickEvent.getMessage().getContentRaw()
+                            .substring(0, buttonClickEvent.getMessage().getContentRaw().indexOf("\n*Antwort 1"));
+                    final String editText = questionAfterTrim + "*(" + user.getName() + " hat geantwortet)*";
+                    final Message message = new MessageBuilder().append(editText).build();
+                    buttonClickEvent.editMessage(message).queue();
                 } else {
                     channel.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im " +
                             "Fragemodus? (!abbruch in einer PM zum abbrechen)").queue();
                 }
             } else {
                 //Question + Wait status
-                if (status.equals(QuizStatus.NONE)) {
-                    question(user, channel);
+                if (status.equals(QuizStatus.NONE) && event.isPresent()) {
+                    final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
+                    question(user, guildMessageReceivedEvent);
                 }
             }
         }
@@ -134,7 +151,7 @@ public class QuizModule extends ReceiveModule {
 
     @Override
     public void handlePM(User user, String message, JDA bot, PrivateChannel channel) {
-        final String[] messages = message.split(" ");
+        final String[] messages = message.split(MESSAGE_SEPERATOR);
         if (message.toLowerCase().equals("abbruch")) {
             cancel(channel);
             return;
@@ -149,7 +166,6 @@ public class QuizModule extends ReceiveModule {
             }
         }
 
-
         switch (status) {
             case WAITING_QUESTION:
                 enterNewQuestionViaPM(message, channel);
@@ -158,7 +174,6 @@ public class QuizModule extends ReceiveModule {
                 enterAnswersViaPM(user, message, channel);
                 break;
             default:
-
         }
     }
 
@@ -284,9 +299,8 @@ public class QuizModule extends ReceiveModule {
 
     private void checkAnswer(User user, int answerNr) {
         int rightAnswerIndex = getRightAnswerIndex();
-        answerNr = answerNr - 1;
-
         String answerOfUser = NO_CLUE;
+
         final String sendToUser;
         if (answerNr == rightAnswerIndex) {
             //send right
@@ -319,7 +333,7 @@ public class QuizModule extends ReceiveModule {
         return 99;
     }
 
-    private void question(User user, TextChannel channel) {
+    private void question(User user, GuildMessageReceivedEvent event) {
         List<QuizQuestion> questionsForUser = dbService.getFilteredQuestionsForUser(user);
         if (!questionsForUser.isEmpty()) {
             Collections.shuffle(questionsForUser);
@@ -328,23 +342,33 @@ public class QuizModule extends ReceiveModule {
             Collections.shuffle(answers);
             this.answers = answers;
 
-            StringBuilder questionBuilder = new StringBuilder(user.getName()).append(", deine Frage von " +
-                    question.getCreatorName() + ": ");
-            questionBuilder.append(question.getText()).append("\n");
-            questionBuilder.append("Antwort 1: ").append(answers.get(0).getText()).append("\n");
-            questionBuilder.append("Antwort 2: ").append(answers.get(1).getText()).append("\n");
-            questionBuilder.append("Antwort 3: ").append(answers.get(2).getText()).append("\n");
-            questionBuilder.append("Antwort 4: ").append(answers.get(3).getText()).append("\n");
-            questionBuilder.append("Antwort 5: ").append(NO_CLUE).append("\n");
+            StringBuilder questionBuilder = new StringBuilder();
+            questionBuilder.append(user.getName()).append(", deine Frage von **").append(question.getCreatorName())
+                    .append("**:\n ");
+            questionBuilder.append("**").append(question.getText()).append("**\n\n");
+            questionBuilder.append("*Antwort 1:*\t** ").append(answers.get(0).getText()).append("**").append("\n");
+            questionBuilder.append("*Antwort 2:*\t** ").append(answers.get(1).getText()).append("**").append("\n");
+            questionBuilder.append("*Antwort 3:*\t** ").append(answers.get(2).getText()).append("**").append("\n");
+            questionBuilder.append("*Antwort 4:*\t** ").append(answers.get(3).getText()).append("**").append("\n");
+            questionBuilder.append("*Antwort 5:*\t** ").append(NO_CLUE).append("**").append("\n");
 
-            channel.sendMessage(questionBuilder.toString()).queue();
+            final String buttonIdBeginn = user.getId() + MESSAGE_SEPERATOR + QUIZ + MESSAGE_SEPERATOR + "answer"
+                    + MESSAGE_SEPERATOR;
+            event.getMessage().reply(questionBuilder.toString())
+                    .setActionRow(
+                            Button.primary(buttonIdBeginn + 0, "Antwort 1"),
+                            Button.primary(buttonIdBeginn + 1, "Antwort 2"),
+                            Button.primary(buttonIdBeginn + 2, "Antwort 3"),
+                            Button.primary(buttonIdBeginn + 3, "Antwort 4"),
+                            Button.primary(buttonIdBeginn + 4, "Keine Ahnung!"))
+                    .queue();
+
             this.status = QuizStatus.WAITING_ANSWER;
         } else {
-            channel.sendMessage("Sorry " + user.getName() + ", Du hast schon alle Fragen beantwortet. Warte " +
-                    "bis es neue gibt ;)").queue();
+            event.getChannel().sendMessage("Sorry " + user.getName()
+                    + ", Du hast schon alle Fragen beantwortet. Warte bis es neue gibt ;)").queue();
         }
     }
-
 
     public static class RankingTableEntry {
         private Long userId;

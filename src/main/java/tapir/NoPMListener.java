@@ -24,7 +24,7 @@ public class NoPMListener extends TapirListener {
                 return;
             }
             final UserWrapper userWrapper = doUserCheck(event.getAuthor());
-            userWrapper.handle(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
+            userWrapper.handle(event, getDbService(), getAllowedChannels(), getUserNotAllowedToAsk());
         } catch (Exception e) {
             event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :(\n@kkuez");
             e.printStackTrace();

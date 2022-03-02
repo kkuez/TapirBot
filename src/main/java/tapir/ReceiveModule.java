@@ -4,7 +4,10 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.Event;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
+import java.util.Optional;
 import java.util.Set;
 
 public abstract class ReceiveModule {
@@ -12,7 +15,7 @@ public abstract class ReceiveModule {
 
     public abstract Set<String> getCommands();
 
-    public abstract void handle(User user, String message, JDA bot, TextChannel channel);
+    public abstract void handle(User user, String messageContentRaw, TextChannel channel, Optional<Event> event);
 
     public abstract boolean waitingForAnswer();
 

@@ -3,12 +3,12 @@ package tapir;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import tapir.quiz.QuizModule;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public abstract class TapirListener extends ListenerAdapter {
 
@@ -37,6 +37,34 @@ public abstract class TapirListener extends ListenerAdapter {
         final UserWrapper userWrapper = userWrapperMap.computeIfAbsent(author.getId(), id -> new UserWrapper(author));
         dbService.handleUser(userWrapper);
         return userWrapper;
+    }
+
+
+    @Override
+    public void onButtonClick(ButtonClickEvent event) {
+         doUserCheck(event.getUser());
+         doUserCheck(event.getInteraction().getMember().getUser());
+        final String[] split = event.getButton().getId().split(QuizModule.MESSAGE_SEPERATOR + "");
+        final String userId = split[0];
+        final String moduleName = split[1];
+        List<String> params = getParamsFromButtonId(split);
+
+        final String userIdPressedButton = event.getInteraction().getMember().getUser().getId();
+        if(!userIdPressedButton.equals(userId)) {
+            final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
+            event.getChannel().sendMessage("Sorry " + userNamePressedButton + ", das ist" +
+                    " nicht dein Button!!! :o").queue();
+            return;
+        }
+
+        getUserWrapperMap().get(userId).handleButton(moduleName, event, params);
+    }
+
+    private List<String> getParamsFromButtonId(String[] split) {
+        final List<String> collect = Arrays.stream(split).collect(Collectors.toList());
+        collect.remove(split[0]);
+        collect.remove(split[1]);
+        return collect;
     }
 
     public Properties getProperties() {
