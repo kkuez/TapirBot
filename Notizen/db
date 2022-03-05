@@ -1,0 +1,36 @@
+CREATE TABLE "QuizQuestions" (
+	"id"	INTEGER,
+	"text"	TEXT,
+	"Right_Answer"	TEXT,
+	"Wrong_Answer_1"	TEXT,
+	"Wrong_Answer_2"	TEXT,
+	"Wrong_Answer_3"	TEXT,
+	"user"	NUMERIC,
+	PRIMARY KEY("id"),
+	FOREIGN KEY("user") REFERENCES "User.id"
+);
+CREATE TABLE "User" (
+	"id"	NUMERIC,
+	"name"	TEXT,
+	PRIMARY KEY("id")
+);
+CREATE TABLE "User_Channels" (
+	"user"	NUMERIC,
+	"channel"	NUMERIC,
+	PRIMARY KEY("user","channel")
+);
+CREATE TABLE "User_QuizQuestions" (
+	"question"	INTEGER,
+	"user"	NUMERIC,
+	"answer"	TEXT,
+	PRIMARY KEY("question","user"),
+	FOREIGN KEY("question") REFERENCES "QuizQuestions.id",
+	FOREIGN KEY("user") REFERENCES "User.id"
+);
+CREATE TABLE "Pokemons" (
+"user" NUMERIC,
+"dexIndex" INTEGER,
+"name" TEXT,
+"level" INTEGER,
+FOREIGN KEY("user") REFERENCES "User.id"
+)

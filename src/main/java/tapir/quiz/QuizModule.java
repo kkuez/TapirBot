@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 public class QuizModule extends ReceiveModule {
 
-    private final DBService dbService;
     private QuizStatus status;
     private QuizQuestion question;
     private List<QuizAnswer> answers;
@@ -34,10 +33,8 @@ public class QuizModule extends ReceiveModule {
     private static Set<Long> userNotAllowedToAsk;
 
     public QuizModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
-        this.dbService = dbService;
-        this.status = QuizStatus.NONE;
-        this.userNotAllowedToAsk = userNotAllowedToAsk;
-        setGeneralChannels(generalChannels);
+        super(dbService, generalChannels, userNotAllowedToAsk);
+        status = QuizStatus.NONE;
     }
 
     @Override
@@ -57,8 +54,7 @@ public class QuizModule extends ReceiveModule {
     }
 
     @Override
-    public void handle(User user, String messageContentRaw, TextChannel channel, Optional<Event> event) {
-        final String[] messages = messageContentRaw.split(MESSAGE_SEPERATOR);
+    public void handle(User user, String[] messages, TextChannel channel, Optional<Event> event) {
         if (messages.length > 1 && status == QuizStatus.NONE) {
             switch (messages[1].toLowerCase()) {
                 case "help":
@@ -78,11 +74,14 @@ public class QuizModule extends ReceiveModule {
             if (status.equals(QuizStatus.WAITING_ANSWER) && messages.length >= 1) {
                 final String numberString = messages[messages.length - 1];
                 if (isInteger(numberString)) {
-                    checkAnswer(user, Integer.parseInt(numberString));
+                    final int answerNr = Integer.parseInt(numberString);
+                    checkAnswer(user, answerNr);
                     final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                     final String questionAfterTrim = buttonClickEvent.getMessage().getContentRaw()
                             .substring(0, buttonClickEvent.getMessage().getContentRaw().indexOf("\n*Antwort 1"));
-                    final String editText = questionAfterTrim + "*(" + user.getName() + " hat geantwortet)*";
+                    final String answerText = answerNr == 4 ? "Keine Ahnung!" :answers.get(answerNr).getText();
+                    final String editText = questionAfterTrim + "*" + user.getName() + "* hat geantwortet mit \"*"
+                            + answerText + "*\"!";
                     final Message message = new MessageBuilder().append(editText).build();
                     buttonClickEvent.editMessage(message).queue();
                 } else {
@@ -206,7 +205,7 @@ public class QuizModule extends ReceiveModule {
                             channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
                             getGeneralChannels().forEach(channel1 ->
                                     channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
-                            dbService.enterQuestions(user, question, answers);
+                            getDbService().enterQuestions(user, question, answers);
                             status = QuizStatus.NONE;
                             break;
                         }
@@ -223,7 +222,7 @@ public class QuizModule extends ReceiveModule {
     }
 
     private void info(TextChannel channel, boolean global) {
-        List<RankingTableEntry> userScores = dbService.getUserScoresPointRated();
+        List<RankingTableEntry> userScores = getDbService().getUserScoresPointRated();
 
         if(!global) {
             filterMembers(channel, userScores);
@@ -319,7 +318,7 @@ public class QuizModule extends ReceiveModule {
         }
 
         user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser).queue());
-        dbService.sendAnswer(user.getIdLong(), question.getId(), answerOfUser);
+        getDbService().sendAnswer(user.getIdLong(), question.getId(), answerOfUser);
         status = QuizStatus.NONE;
     }
 
@@ -334,7 +333,7 @@ public class QuizModule extends ReceiveModule {
     }
 
     private void question(User user, GuildMessageReceivedEvent event) {
-        List<QuizQuestion> questionsForUser = dbService.getFilteredQuestionsForUser(user);
+        List<QuizQuestion> questionsForUser = getDbService().getFilteredQuestionsForUser(user);
         if (!questionsForUser.isEmpty()) {
             Collections.shuffle(questionsForUser);
             question = questionsForUser.get(0);

@@ -6,17 +6,27 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
+import tapir.pokemon.PokeModule;
 import tapir.quiz.QuizModule;
 
 import java.util.*;
 
 public class UserWrapper {
+    private static PokeModule pokeModule;
     private Map<Class, ReceiveModule> modules;
     private User user;
 
     public UserWrapper(User user) {
-        modules = new HashMap<>();
+        if(modules == null) {
+            modules = new HashMap<>();
+        }
         this.user = user;
+    }
+
+    public static void init(DBService dbService, Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk,
+                            JDA bot) {
+        pokeModule = new PokeModule(dbService, allowedChannels,
+                userNotAllowedToAsk, bot);
     }
 
     public Map<Class, ReceiveModule> getModules() {
@@ -27,33 +37,55 @@ public class UserWrapper {
         return user;
     }
 
-    public void handleButton(String moduleName, ButtonClickEvent event, List<String> params) {
-        final Optional<ReceiveModule> moduleOpt =
-                modules.values().stream().filter(module -> module.getCommands().contains(moduleName.toLowerCase()))
-                        .findFirst();
+    public void handleButton(ButtonClickEvent event, String[] split) {
 
-        if (moduleOpt.isPresent()) {
-            moduleOpt.get().handle(user, event.getButton().getId(), event.getTextChannel(), Optional.of(event));
-        } else {
-            throw new RuntimeException("No module found for " + moduleName);
+        switch (split[1].toLowerCase()) {
+            case "quiz":
+                if(!split[0].equals(event.getInteraction().getMember().getId())) {
+                    final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
+                    event.getChannel().sendMessage("Sorry " + userNamePressedButton + ", das ist" +
+                            " nicht dein Button!!! :o").queue();
+                    return;
+                }
+
+                modules.get(QuizModule.class).handle(user, event.getButton().getId().split(" "), event.getTextChannel()
+                        , Optional.of(event));
+                break;
+            case "poke":
+                modules.computeIfAbsent(PokeModule.class, pokeClass -> {
+                    return pokeModule;
+                }).handle(event.getInteraction().getMember().getUser(),
+                        event.getButton().getId().split(" "), event.getTextChannel(), Optional.of(event));
+                break;
         }
-
     }
 
     public void handle(GuildMessageReceivedEvent event, DBService dbService, Set<TextChannel> allowedChannels,
                        Set<Long> userNotAllowedToAsk) {
         final String message = event.getMessage().getContentRaw().replace("!", "").split(" ")[0].toLowerCase();
+        //TODO Very late init of modules here, init in constructor
         switch (message) {
             case "q":
             case "quiz":
                 modules.computeIfAbsent(QuizModule.class, quizClass -> new QuizModule(dbService, allowedChannels,
-                        userNotAllowedToAsk)).handle(user, event.getMessage().getContentRaw(),
+                        userNotAllowedToAsk)).handle(user, event.getMessage().getContentRaw().split(" "),
                         event.getChannel(), Optional.of(event));
+                break;
+            case "p":
+            case "poke":
+            case "poké":
+            case "pokemon":
+            case "pokémon":
+                modules.computeIfAbsent(PokeModule.class, pokeClass -> {
+                    return pokeModule;
+                }).handle(user, event.getMessage().getContentRaw()
+                                .split(" "), event.getChannel(), Optional.of(event));
                 break;
             default:
                 for (ReceiveModule module : modules.values()) {
                     if (module.waitingForAnswer()) {
-                        module.handle(user, event.getMessage().getContentRaw(), event.getChannel(), Optional.of(event));
+                        module.handle(user, event.getMessage().getContentRaw().split(" "), event.getChannel(),
+                                Optional.of(event));
                     }
                 }
         }
@@ -68,6 +100,15 @@ public class UserWrapper {
             case "quiz":
                 modules.computeIfAbsent(QuizModule.class, quizClass -> new QuizModule(dbService, allowedChannels,
                         userNotAllowedToAsk)).handlePM(user,
+                        fullWithoutAusrufezeichen, bot, event.getChannel());
+                break;
+            case "p":
+            case "poke":
+            case "poké":
+            case "pokemon":
+            case "pokémon":
+                modules.computeIfAbsent(PokeModule.class, pokeClass -> new PokeModule(dbService, allowedChannels,
+                        userNotAllowedToAsk, event.getJDA())).handlePM(user,
                         fullWithoutAusrufezeichen, bot, event.getChannel());
                 break;
             default:

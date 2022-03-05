@@ -3,6 +3,8 @@ package tapir;
 import net.dv8tion.jda.api.entities.User;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import tapir.exception.TapirException;
+import tapir.pokemon.PokeModule;
+import tapir.pokemon.PokeModule.Pokemon;
 import tapir.quiz.QuizModule;
 import tapir.quiz.QuizAnswer;
 import tapir.quiz.QuizQuestion;
@@ -210,5 +212,32 @@ public class DBService {
             throw new TapirException("Could not get info for user " + cmd, e);
         }
         return userInfo;
+    }
+
+    public void registerCaughtPokemon(User user, Pokemon pokemon) {
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate(
+            "insert into Pokemons(user, dexIndex, name, level) values (" + user.getIdLong() + ", "
+                    + pokemon.getPokedexIndex() + ", '" + pokemon.getName() + "', " + pokemon.getLevel() +  ")");
+        } catch (SQLException e) {
+            throw new TapirException("Could not handle Users!", e);
+        }
+    }
+
+    public List<Pokemon> getPokemonOfUser(User user) {
+        List<Pokemon> pokemonList = new ArrayList<>();
+
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs = statement.executeQuery("select * from Pokemons where user=" + user.getIdLong())) {
+            while (rs.next()) {
+                Pokemon pokemon = new Pokemon(rs.getInt("dexIndex"), rs.getString("name"), rs.getInt("level"));
+                pokemonList.add(pokemon);
+            }
+        } catch (SQLException e) {
+            throw new TapirException("Could not read Users!", e);
+        }
+
+        Collections.sort(pokemonList);
+        return pokemonList;
     }
 }

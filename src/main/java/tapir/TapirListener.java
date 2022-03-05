@@ -1,6 +1,7 @@
 package tapir;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
@@ -44,20 +45,28 @@ public abstract class TapirListener extends ListenerAdapter {
     public void onButtonClick(ButtonClickEvent event) {
          doUserCheck(event.getUser());
          doUserCheck(event.getInteraction().getMember().getUser());
-        final String[] split = event.getButton().getId().split(QuizModule.MESSAGE_SEPERATOR + "");
-        final String userId = split[0];
-        final String moduleName = split[1];
-        List<String> params = getParamsFromButtonId(split);
+         String buttonId = doButtonStringValidityCheck(event);
 
-        final String userIdPressedButton = event.getInteraction().getMember().getUser().getId();
-        if(!userIdPressedButton.equals(userId)) {
-            final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
-            event.getChannel().sendMessage("Sorry " + userNamePressedButton + ", das ist" +
-                    " nicht dein Button!!! :o").queue();
-            return;
+         //TODO Ab hbier mal refactorn
+        final String[] split = buttonId.split(QuizModule.MESSAGE_SEPERATOR + "");
+        final String userIdString = split[0];
+        getUserWrapperMap().get(userIdString).handleButton(event, split);
+    }
+
+    /**
+     * We replace the users number here as Buttons get either called by the user, f.e. a user asking for a Quizquestion,
+     * or when its called by the system without a user calling, f.e. when posting pokemon.
+     * In this case we put the pressing users number in front the be able to dispatch the request to the relating
+     * module.
+     * */
+    private String doButtonStringValidityCheck(ButtonClickEvent event) {
+        final String id = event.getButton().getId();
+        final String[] split = id.split(" ");
+        if(split[0].equals(ReceiveModule.NON_VALID_USER + "")) {
+            return id
+                    .replace(ReceiveModule.NON_VALID_USER + "", event.getInteraction().getMember().getId());
         }
-
-        getUserWrapperMap().get(userId).handleButton(moduleName, event, params);
+        return id;
     }
 
     private List<String> getParamsFromButtonId(String[] split) {

@@ -12,20 +12,36 @@ import java.util.Set;
 
 public abstract class ReceiveModule {
     private Set<TextChannel> generalChannels;
+    private Set<Long> userNotAllowedToAsk;
+    private DBService dbService;
+    public static final int NON_VALID_USER = 999;
+
+    public ReceiveModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
+
+        this.dbService = dbService;
+        this.generalChannels = generalChannels;
+        this.userNotAllowedToAsk = userNotAllowedToAsk;
+    }
 
     public abstract Set<String> getCommands();
 
-    public abstract void handle(User user, String messageContentRaw, TextChannel channel, Optional<Event> event);
+    public abstract void handle(User user, String[] messages, TextChannel channel, Optional<Event> event);
 
     public abstract boolean waitingForAnswer();
 
     public abstract void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel);
 
-    public void setGeneralChannels(Set<TextChannel> generalChannels) {
-        this.generalChannels = generalChannels;
-    }
-
     public Set<TextChannel> getGeneralChannels() {
         return generalChannels;
     };
+
+    public Set<Long> getUserNotAllowedToAsk() {
+        return userNotAllowedToAsk;
+    }
+
+    public DBService getDbService() {
+        return dbService;
+    }
+
+
 }
