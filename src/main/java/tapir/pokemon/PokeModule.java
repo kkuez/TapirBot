@@ -44,15 +44,13 @@ public class PokeModule extends ReceiveModule {
         }
 
         catchThread = new Thread(() -> {
-            // long oneHourAsMilliSecs = 3600000;
-            long oneHourAsMilliSecs = 1000;
+             long oneHourAsMilliSecs = 3600000;
             while (true) {
                 long timeToWait = 0;
-                // while(timeToWait < 300000) {
+                 while(timeToWait < 300000) {
                 final double random = Math.random();
-                // timeToWait = Math.round(random * oneHourAsMilliSecs);
-                timeToWait = 1000;
-                // }
+                timeToWait = Math.round(random * oneHourAsMilliSecs);
+                 }
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
@@ -67,11 +65,6 @@ public class PokeModule extends ReceiveModule {
                     e.printStackTrace();
                 }
 
-                try {
-                    Thread.sleep(300000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
             }
         });
         catchThread.start();
