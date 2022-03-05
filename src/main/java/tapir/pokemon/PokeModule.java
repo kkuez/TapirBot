@@ -20,6 +20,7 @@ import tapir.ReceiveModule;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.sql.SQLOutput;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -44,13 +45,14 @@ public class PokeModule extends ReceiveModule {
         }
 
         catchThread = new Thread(() -> {
-             long oneHourAsMilliSecs = 3600000;
+            long oneHourAsMilliSecs = 3600000;
             while (true) {
                 long timeToWait = 0;
-                 while(timeToWait < 300000) {
-                final double random = Math.random();
-                timeToWait = Math.round(random * oneHourAsMilliSecs);
-                 }
+                while (timeToWait < 300000) {
+                    final double random = Math.random();
+                    timeToWait = Math.round(random * oneHourAsMilliSecs);
+                }
+                System.out.println("Starting new Pokemon-Loop, waiting " + timeToWait/1000);
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
@@ -71,24 +73,38 @@ public class PokeModule extends ReceiveModule {
     }
 
     private void makeOldDisappear() {
-        bot.getTextChannels().stream().filter(channel -> channel.getName().contains("pokemon")).forEach(channel -> {
-            channel.getIterableHistory()
-                    .takeAsync(100)
-                    .thenApply(list -> {
-                        final List<Message> messagesToEdit = list.stream()
-                                .filter(message -> message.getContentRaw().contains("ist erschienen!")
-                                        && !message.getContentRaw().contains("hats gefangen!"))
-                                .collect(Collectors.toList());
+        Thread disappearThread = new Thread(() -> {
+            System.out.println("Starting disappearThread");
+            if (currentPokemon != null) {
+                try {
+                    Thread.sleep(300000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                final String disappearedMessage = "\n...und ist wieder verschwunden.";
+                bot.getTextChannels().stream().filter(channel -> channel.getName().contains("pokemon")).forEach(channel -> {
+                    channel.getIterableHistory()
+                            .takeAsync(100)
+                            .thenApply(list -> {
+                                final List<Message> messagesToEdit = list.stream()
+                                        .filter(message -> message.getContentRaw().contains("ist erschienen!")
+                                                && !message.getContentRaw().contains("hats gefangen!")
+                                        && !message.getContentRaw().contains(disappearedMessage))
+                                        .collect(Collectors.toList());
 
-                        messagesToEdit.forEach(message -> {
-                            MessageBuilder messageBuilder = new MessageBuilder();
-                            messageBuilder.append(message.getContentRaw() + "\n...und niemand hats gefangen.")
-                                    .setActionRows();
-                            message.editMessage(messageBuilder.build()).queue();
-                        });
-                        return messagesToEdit;
-                    });
+                                messagesToEdit.forEach(message -> {
+                                    MessageBuilder messageBuilder = new MessageBuilder();
+                                    messageBuilder.append(message.getContentRaw() + disappearedMessage)
+                                            .setActionRows();
+                                    message.editMessage(messageBuilder.build()).queue();
+                                });
+                                return messagesToEdit;
+                            });
+                });
+                currentPokemon = null;
+            }
         });
+        disappearThread.start();
     }
 
     private void makeCurrentAppear() {
@@ -105,12 +121,14 @@ public class PokeModule extends ReceiveModule {
             bis.transferTo(fos);
             bot.getTextChannels().stream().filter(channel -> channel.getName().contains("pokemon"))
                     .forEach(channel -> {
-                        final MessageAction messageAction = channel.sendMessage("Ein wildes **" + currentPokemon.getName() + "** ist erschienen!");
+                        final MessageAction messageAction = channel
+                                .sendMessage("Ein wildes **" + currentPokemon.getName() + "** ist erschienen!");
                         messageAction
                                 .addFile(pictureTemp)
                                 .setActionRow(Button.primary(NON_VALID_USER + " poke catch", "Fangen!"))
                                 .queue();
                     });
+            pictureTemp.delete();
         } catch (IOException e) {
             e.printStackTrace();
         }
