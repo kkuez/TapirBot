@@ -22,7 +22,7 @@ public class PMListener extends TapirListener {
             final UserWrapper userWrapper = doUserCheck(event.getAuthor());
             userWrapper.handlePM(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
         } catch (Exception e) {
-            event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :( Sag @kkuez Bescheid!");
+            event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :( Sag @kkuez Bescheid!").queue();
             e.printStackTrace();
         }
     }

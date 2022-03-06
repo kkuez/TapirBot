@@ -21,6 +21,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.sql.SQLOutput;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -52,7 +53,8 @@ public class PokeModule extends ReceiveModule {
                     final double random = Math.random();
                     timeToWait = Math.round(random * oneHourAsMilliSecs);
                 }
-                System.out.println("Starting new Pokemon-Loop, waiting " + timeToWait/1000);
+                System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
+                        + timeToWait/1000);
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
@@ -81,7 +83,7 @@ public class PokeModule extends ReceiveModule {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                final String disappearedMessage = "\n...und ist wieder verschwunden.";
+                final String disappearedMessage = "\n...und wieder verschwunden.";
                 bot.getTextChannels().stream().filter(channel -> channel.getName().contains("pokemon")).forEach(channel -> {
                     channel.getIterableHistory()
                             .takeAsync(100)

@@ -30,7 +30,6 @@ public class QuizModule extends ReceiveModule {
     public static final String NO_CLUE = "Keine Ahnung!";
     public static final String QUIZ = "Quiz";
     public static final String MESSAGE_SEPERATOR = " ";
-    private static Set<Long> userNotAllowedToAsk;
 
     public QuizModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
         super(dbService, generalChannels, userNotAllowedToAsk);
@@ -101,7 +100,7 @@ public class QuizModule extends ReceiveModule {
 
 
     private void newQuestion(User user) {
-        if(userNotAllowedToAsk.contains(user.getIdLong())) {
+        if(getUserNotAllowedToAsk().contains(user.getIdLong())) {
             return;
         }
 
