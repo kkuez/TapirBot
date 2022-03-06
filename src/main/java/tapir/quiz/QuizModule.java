@@ -342,7 +342,7 @@ public class QuizModule extends ReceiveModule {
             StringBuilder questionBuilder = new StringBuilder();
             questionBuilder.append(user.getName()).append(", deine Frage von **").append(question.getCreatorName())
                     .append("**:\n ");
-            questionBuilder.append("**").append(question.getText()).append("**\n\n");
+            questionBuilder.append("**").append(question.getText()).append("**\n");
             questionBuilder.append("*Antwort 1:*\t** ").append(answers.get(0).getText()).append("**").append("\n");
             questionBuilder.append("*Antwort 2:*\t** ").append(answers.get(1).getText()).append("**").append("\n");
             questionBuilder.append("*Antwort 3:*\t** ").append(answers.get(2).getText()).append("**").append("\n");
