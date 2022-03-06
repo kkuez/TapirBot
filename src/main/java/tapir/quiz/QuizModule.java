@@ -98,7 +98,6 @@ public class QuizModule extends ReceiveModule {
         System.out.println();
     }
 
-
     private void newQuestion(User user) {
         if(getUserNotAllowedToAsk().contains(user.getIdLong())) {
             return;
