@@ -227,9 +227,9 @@ public class PokeModule extends ReceiveModule {
                 if (pokemonList.size() == 0) {
                     builder.append(" noch keine");
                 } else if (pokemonList.size() < 50) {
-                    builder.append("erst **").append(pokemonList.size()).append("**");
+                    builder.append(" erst **").append(pokemonList.size()).append("**");
                 } else {
-                    builder.append("schon **").append(pokemonList.size()).append("**");
+                    builder.append(" schon **").append(pokemonList.size()).append("**");
                 }
                 builder.append(" Pokémon gefangen:__");
 
