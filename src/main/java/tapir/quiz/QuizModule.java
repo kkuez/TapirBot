@@ -79,9 +79,15 @@ public class QuizModule extends ReceiveModule {
                     final String questionAfterTrim = buttonClickEvent.getMessage().getContentRaw()
                             .substring(0, buttonClickEvent.getMessage().getContentRaw().indexOf("\n*Antwort 1"));
                     final String answerText = answerNr == 4 ? "Keine Ahnung!" :answers.get(answerNr).getText();
-                    final String editText = questionAfterTrim + "\n*" + user.getName() + "* hat geantwortet mit \"*"
-                            + answerText + "*\"!";
-                    final Message message = new MessageBuilder().append(editText).build();
+
+                    final Message message = new MessageBuilder()
+                            .append(questionAfterTrim)
+                            .append("\n*")
+                            .append(user.getName())
+                            .append("* hat geantwortet mit \"*")
+                            .append(answerText)
+                            .append("*\"!")
+                            .build();
                     buttonClickEvent.editMessage(message).queue();
                 } else {
                     channel.sendMessage("Sorry " + user.getName() + ", scheinbar bist du noch im " +

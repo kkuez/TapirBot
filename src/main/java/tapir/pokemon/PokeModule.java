@@ -93,7 +93,7 @@ public class PokeModule extends ReceiveModule {
 
                                 messagesToEdit.forEach(message -> {
                                     MessageBuilder messageBuilder = new MessageBuilder();
-                                    messageBuilder.append(message.getContentRaw() + disappearedMessage)
+                                    messageBuilder.append(message.getContentRaw()).append(disappearedMessage)
                                             .setActionRows();
                                     message.editMessage(messageBuilder.build()).queue();
                                 });
@@ -138,7 +138,6 @@ public class PokeModule extends ReceiveModule {
         while (index == 0) {
             double random = Math.random();
             index = Math.round(151 * random);
-
         }
 
         JSONObject json;
@@ -199,9 +198,11 @@ public class PokeModule extends ReceiveModule {
                 final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                 Pokemon pokemon = currentPokemon;
                 currentPokemon = null;
-                final Message message = new MessageBuilder().append(buttonClickEvent.getMessage().getContentRaw()
-                                + "\n*" +
-                                buttonClickEvent.getInteraction().getMember().getUser().getName() + "* hats gefangen!")
+                final Message message = new MessageBuilder()
+                        .append(buttonClickEvent.getMessage().getContentRaw())
+                        .append("\n*")
+                        .append(buttonClickEvent.getInteraction().getMember().getUser().getName())
+                        .append("* hats gefangen!")
                         .build();
                 buttonClickEvent.getMessage().editMessage(message).queue();
 
