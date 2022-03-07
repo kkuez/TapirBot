@@ -212,29 +212,26 @@ public class PokeModule extends ReceiveModule {
             case "pokédex":
                 final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
                 List<Pokemon> pokemonList;
-                StringBuilder builder = new StringBuilder("__");
-                String adressing;
+                StringBuilder builder = new StringBuilder("__*");
                 if(messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
                         final String userIdString = messages[2].replace("<@!", "").replace(">", "");
                         final long id = Long.parseLong(userIdString);
                         pokemonList = getDbService().getPokemonOfUser(id);
                         Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
-                        builder.append("*").append(mentionedUser.get("name"));
-                        adressing = "* hat";
+                        builder.append(mentionedUser.get("name")).append("* hat");
                 } else {
                     pokemonList = getDbService().getPokemonOfUser(user);
-                    builder.append("*").append(user.getName());
-                    adressing = "*, du hast";
+                    builder.append(user.getName()).append("*, du hast");
                 }
 
                 if (pokemonList.size() == 0) {
-                    builder.append(adressing + " noch keine Pokémon gefangen:");
+                    builder.append(" noch keine");
                 } else if (pokemonList.size() < 50) {
-                    builder.append(adressing + " erst **").append(pokemonList.size()).append("** Pokémon gefangen:");
+                    builder.append("erst **").append(pokemonList.size()).append("**");
                 } else {
-                    builder.append(adressing + " schon **").append(pokemonList.size()).append("** Pokémon gefangen :o:");
+                    builder.append("schon **").append(pokemonList.size()).append("**");
                 }
-                builder.append("__");
+                builder.append(" Pokémon gefangen:__");
 
                 for (Pokemon pokemonFromList : pokemonList) {
                     builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")
