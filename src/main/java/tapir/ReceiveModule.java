@@ -9,12 +9,14 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public abstract class ReceiveModule {
     private Set<TextChannel> generalChannels;
     private Set<Long> userNotAllowedToAsk;
     private DBService dbService;
-    public static final int NON_VALID_USER = 999;
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newScheduledThreadPool(2);
 
     public ReceiveModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
 
@@ -43,5 +45,7 @@ public abstract class ReceiveModule {
         return dbService;
     }
 
-
+    public static ExecutorService getExecutorService() {
+        return EXECUTOR_SERVICE;
+    }
 }

@@ -50,7 +50,7 @@ public abstract class TapirListener extends ListenerAdapter {
          //TODO Ab hbier mal refactorn
         final String[] split = buttonId.split(QuizModule.MESSAGE_SEPERATOR + "");
         final String userIdString = split[0];
-        getUserWrapperMap().get(userIdString).handleButton(event, split);
+        getUserWrapperMap().get(event.getInteraction().getMember().getUser().getId()).handleButton(event, split);
     }
 
     /**
@@ -60,13 +60,7 @@ public abstract class TapirListener extends ListenerAdapter {
      * module.
      * */
     private String doButtonStringValidityCheck(ButtonClickEvent event) {
-        final String id = event.getButton().getId();
-        final String[] split = id.split(" ");
-        if(split[0].equals(ReceiveModule.NON_VALID_USER + "")) {
-            return id
-                    .replace(ReceiveModule.NON_VALID_USER + "", event.getInteraction().getMember().getId());
-        }
-        return id;
+        return event.getButton().getId();
     }
 
     private List<String> getParamsFromButtonId(String[] split) {

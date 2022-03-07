@@ -79,7 +79,7 @@ public class QuizModule extends ReceiveModule {
                     final String questionAfterTrim = buttonClickEvent.getMessage().getContentRaw()
                             .substring(0, buttonClickEvent.getMessage().getContentRaw().indexOf("\n*Antwort 1"));
                     final String answerText = answerNr == 4 ? "Keine Ahnung!" :answers.get(answerNr).getText();
-                    final String editText = questionAfterTrim + "*" + user.getName() + "* hat geantwortet mit \"*"
+                    final String editText = questionAfterTrim + "\n*" + user.getName() + "* hat geantwortet mit \"*"
                             + answerText + "*\"!";
                     final Message message = new MessageBuilder().append(editText).build();
                     buttonClickEvent.editMessage(message).queue();
@@ -293,7 +293,6 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-
     private void checkAnswer(User user, int answerNr) {
         int rightAnswerIndex = getRightAnswerIndex();
         String answerOfUser = NO_CLUE;
@@ -349,8 +348,8 @@ public class QuizModule extends ReceiveModule {
             questionBuilder.append("*Antwort 4:*\t** ").append(answers.get(3).getText()).append("**").append("\n");
             questionBuilder.append("*Antwort 5:*\t** ").append(NO_CLUE).append("**").append("\n");
 
-            final String buttonIdBeginn = user.getId() + MESSAGE_SEPERATOR + QUIZ + MESSAGE_SEPERATOR + "answer"
-                    + MESSAGE_SEPERATOR;
+            final String buttonIdBeginn = QUIZ + MESSAGE_SEPERATOR + "answer"
+                    + MESSAGE_SEPERATOR+ user.getId() + MESSAGE_SEPERATOR;
             event.getMessage().reply(questionBuilder.toString())
                     .setActionRow(
                             Button.primary(buttonIdBeginn + 0, "Antwort 1"),

@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.sql.SQLOutput;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -32,7 +33,6 @@ public class PokeModule extends ReceiveModule {
 
     private static Pokemon currentPokemon;
     private static JDA bot;
-    private static Thread catchThread;
 
     public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk, JDA bot) {
         super(dbService, allowedChannels, userNotAllowedToAsk);
@@ -41,20 +41,17 @@ public class PokeModule extends ReceiveModule {
     }
 
     private void startCatchLoop() {
-        if (catchThread != null) {
-            return;
-        }
-
-        catchThread = new Thread(() -> {
+        final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
             while (true) {
-                long timeToWait = 0;
+                long timeToWait = 10000;
+                /*long timeToWait = 0;
                 while (timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * oneHourAsMilliSecs);
-                }
+                }*/
                 System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
-                        + timeToWait/1000);
+                        + timeToWait / 1000);
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
@@ -70,12 +67,12 @@ public class PokeModule extends ReceiveModule {
                 }
 
             }
-        });
-        catchThread.start();
+        };
+        getExecutorService().submit(loopRunnable);
     }
 
     private void makeOldDisappear() {
-        Thread disappearThread = new Thread(() -> {
+        final Runnable disappearRunnable = () -> {
             System.out.println("Starting disappearThread");
             if (currentPokemon != null) {
                 try {
@@ -84,14 +81,14 @@ public class PokeModule extends ReceiveModule {
                     e.printStackTrace();
                 }
                 final String disappearedMessage = "\n...und wieder verschwunden.";
-                bot.getTextChannels().stream().filter(channel -> channel.getName().contains("pokemon")).forEach(channel -> {
+                getGeneralChannels().forEach(channel -> {
                     channel.getIterableHistory()
                             .takeAsync(100)
                             .thenApply(list -> {
                                 final List<Message> messagesToEdit = list.stream()
                                         .filter(message -> message.getContentRaw().contains("ist erschienen!")
                                                 && !message.getContentRaw().contains("hats gefangen!")
-                                        && !message.getContentRaw().contains(disappearedMessage))
+                                                && !message.getContentRaw().contains(disappearedMessage))
                                         .collect(Collectors.toList());
 
                                 messagesToEdit.forEach(message -> {
@@ -105,8 +102,9 @@ public class PokeModule extends ReceiveModule {
                 });
                 currentPokemon = null;
             }
-        });
-        disappearThread.start();
+        };
+
+        getExecutorService().submit(disappearRunnable);
     }
 
     private void makeCurrentAppear() {
@@ -121,13 +119,12 @@ public class PokeModule extends ReceiveModule {
              final BufferedInputStream bis =
                      new BufferedInputStream(new URL(currentPokemon.getPictureUrlString()).openStream())) {
             bis.transferTo(fos);
-            bot.getTextChannels().stream().filter(channel -> channel.getName().contains("pokemon"))
-                    .forEach(channel -> {
+            getGeneralChannels().forEach(channel -> {
                         final MessageAction messageAction = channel
                                 .sendMessage("Ein wildes **" + currentPokemon.getName() + "** ist erschienen!");
                         messageAction
                                 .addFile(pictureTemp)
-                                .setActionRow(Button.primary(NON_VALID_USER + " poke catch", "Fangen!"))
+                                .setActionRow(Button.primary("poke catch", "Fangen!"))
                                 .queue();
                     });
             pictureTemp.delete();
@@ -193,7 +190,7 @@ public class PokeModule extends ReceiveModule {
     @Override
     public void handle(User user, String[] messages, TextChannel channel, Optional<Event> event) {
 
-        switch (messages[messages.length - 1].toLowerCase()) {
+        switch (messages[1].toLowerCase()) {
             case "catch":
                 if (currentPokemon == null) {
                     return;
@@ -214,17 +211,30 @@ public class PokeModule extends ReceiveModule {
             case "pokedex":
             case "pokédex":
                 final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
-                List<Pokemon> pokemonList = getDbService().getPokemonOfUser(user);
-                StringBuilder builder = new StringBuilder();
-
-                builder.append("*").append(user.getName());
-                if (pokemonList.size() == 0) {
-                    builder.append("*, du hast noch keine Pokémon gefangen.");
-                } else if (pokemonList.size() < 50) {
-                    builder.append("*, du hast erst ").append(pokemonList.size()).append(" Pokémon gefangen\n");
+                List<Pokemon> pokemonList;
+                StringBuilder builder = new StringBuilder("__");
+                String adressing;
+                if(messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
+                        final String userIdString = messages[2].replace("<@!", "").replace(">", "");
+                        final long id = Long.parseLong(userIdString);
+                        pokemonList = getDbService().getPokemonOfUser(id);
+                        Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
+                        builder.append("*").append(mentionedUser.get("name"));
+                        adressing = "* hat";
                 } else {
-                    builder.append("*, du hast schon ").append(pokemonList.size()).append(" Pokémon gefangen :o\n");
+                    pokemonList = getDbService().getPokemonOfUser(user);
+                    builder.append("*").append(user.getName());
+                    adressing = "*, du hast";
                 }
+
+                if (pokemonList.size() == 0) {
+                    builder.append(adressing + " noch keine Pokémon gefangen:");
+                } else if (pokemonList.size() < 50) {
+                    builder.append(adressing + " erst **").append(pokemonList.size()).append("** Pokémon gefangen:");
+                } else {
+                    builder.append(adressing + " schon **").append(pokemonList.size()).append("** Pokémon gefangen :o:");
+                }
+                builder.append("__");
 
                 for (Pokemon pokemonFromList : pokemonList) {
                     builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")

@@ -23,10 +23,9 @@ public class UserWrapper {
         this.user = user;
     }
 
-    public static void init(DBService dbService, Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk,
-                            JDA bot) {
-        pokeModule = new PokeModule(dbService, allowedChannels,
-                userNotAllowedToAsk, bot);
+    public static void init(DBService dbService, Set<TextChannel> allowedChannels, Set<TextChannel> pokeChannels,
+                            Set<Long> userNotAllowedToAsk, JDA bot) {
+        pokeModule = new PokeModule(dbService, pokeChannels, userNotAllowedToAsk, bot);
     }
 
     public Map<Class, ReceiveModule> getModules() {
@@ -39,9 +38,9 @@ public class UserWrapper {
 
     public void handleButton(ButtonClickEvent event, String[] split) {
 
-        switch (split[1].toLowerCase()) {
+        switch (split[0].toLowerCase()) {
             case "quiz":
-                if(!split[0].equals(event.getInteraction().getMember().getId())) {
+                if(!split[2].equals(event.getInteraction().getMember().getId())) {
                     final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
                     event.getChannel().sendMessage("Sorry " + userNamePressedButton + ", das ist" +
                             " nicht dein Button!!! :o").queue();
@@ -76,10 +75,10 @@ public class UserWrapper {
             case "poké":
             case "pokemon":
             case "pokémon":
-                modules.computeIfAbsent(PokeModule.class, pokeClass -> {
-                    return pokeModule;
-                }).handle(user, event.getMessage().getContentRaw()
-                                .split(" "), event.getChannel(), Optional.of(event));
+                //Direkt adressing as there is only one global PokeModul in opposite to the many Quizmodules.
+                //TODO Refactorn (s. oben)?
+                pokeModule.handle(user, event.getMessage().getContentRaw().split(" "),
+                        event.getChannel(), Optional.of(event));
                 break;
             default:
                 for (ReceiveModule module : modules.values()) {
@@ -107,9 +106,9 @@ public class UserWrapper {
             case "poké":
             case "pokemon":
             case "pokémon":
-                modules.computeIfAbsent(PokeModule.class, pokeClass -> new PokeModule(dbService, allowedChannels,
-                        userNotAllowedToAsk, event.getJDA())).handlePM(user,
-                        fullWithoutAusrufezeichen, bot, event.getChannel());
+                //Direkt adressing as there is only one global PokeModul in opposite to the many Quizmudols.
+                //TODO Refactorn (s. oben)?
+                pokeModule.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel());
                 break;
             default:
                 for (ReceiveModule module : modules.values()) {

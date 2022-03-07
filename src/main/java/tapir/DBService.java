@@ -112,12 +112,12 @@ public class DBService {
         List<QuizModule.RankingTableEntry> rankingTable = new ArrayList<>();
 
         final String sql = "select user as userId, " +
-                    "(select name from User where id=uuq.user) as userName, " +
-                    "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
-                    "from User_QuizQuestions where user=uuq.user) as points, " +
-                    "count(question) as answered " +
-                    "from User_QuizQuestions uuq" +
-                    " group by user order by points asc";
+                "(select name from User where id=uuq.user) as userName, " +
+                "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
+                "from User_QuizQuestions where user=uuq.user) as points, " +
+                "count(question) as answered " +
+                "from User_QuizQuestions uuq" +
+                " group by user order by points asc";
 
         try (Statement statement = getConnection().createStatement();
              ResultSet rs = statement.executeQuery(sql)) {
@@ -199,16 +199,30 @@ public class DBService {
         }
     }
 
-    public Map<String, String> getUserInfo(String cmd) {
+    public Map<String, String> getUserInfoById(long id) {
         Map<String, String> userInfo = new HashMap<>(2);
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("Select * from User where name='" + cmd + "'")) {
+             ResultSet rs = statement.executeQuery("Select * from User where id='" + id + "'")) {
             while (rs.next()) {
                 userInfo.put("name", rs.getString("name"));
                 userInfo.put("id", rs.getLong("id") + "");
             }
         } catch (SQLException e) {
-            throw new TapirException("Could not get info for user " + cmd, e);
+            throw new TapirException("Could not get info for user " + id, e);
+        }
+        return userInfo;
+    }
+
+    public Map<String, String> getUserInfoByName(String name) {
+        Map<String, String> userInfo = new HashMap<>(2);
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs = statement.executeQuery("Select * from User where name='" + name + "'")) {
+            while (rs.next()) {
+                userInfo.put("name", rs.getString("name"));
+                userInfo.put("id", rs.getLong("id") + "");
+            }
+        } catch (SQLException e) {
+            throw new TapirException("Could not get info for user " + name, e);
         }
         return userInfo;
     }
@@ -216,18 +230,22 @@ public class DBService {
     public void registerCaughtPokemon(User user, Pokemon pokemon) {
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate(
-            "insert into Pokemons(user, dexIndex, name, level) values (" + user.getIdLong() + ", "
-                    + pokemon.getPokedexIndex() + ", '" + pokemon.getName() + "', " + pokemon.getLevel() +  ")");
+                    "insert into Pokemons(user, dexIndex, name, level) values (" + user.getIdLong() + ", "
+                            + pokemon.getPokedexIndex() + ", '" + pokemon.getName() + "', " + pokemon.getLevel() + ")");
         } catch (SQLException e) {
             throw new TapirException("Could not handle Users!", e);
         }
     }
 
     public List<Pokemon> getPokemonOfUser(User user) {
+        return getPokemonOfUser(user.getIdLong());
+    }
+
+    public List<Pokemon> getPokemonOfUser(Long id) {
         List<Pokemon> pokemonList = new ArrayList<>();
 
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("select * from Pokemons where user=" + user.getIdLong())) {
+             ResultSet rs = statement.executeQuery("select * from Pokemons where user=" + id)) {
             while (rs.next()) {
                 Pokemon pokemon = new Pokemon(rs.getInt("dexIndex"), rs.getString("name"), rs.getInt("level"));
                 pokemonList.add(pokemon);
@@ -239,4 +257,5 @@ public class DBService {
         Collections.sort(pokemonList);
         return pokemonList;
     }
+
 }
