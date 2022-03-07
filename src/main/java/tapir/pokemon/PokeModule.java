@@ -44,12 +44,12 @@ public class PokeModule extends ReceiveModule {
         final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
             while (true) {
-                long timeToWait = 10000;
-                /*long timeToWait = 0;
+                //long timeToWait = 10000;
+                long timeToWait = 0;
                 while (timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * oneHourAsMilliSecs);
-                }*/
+                }
                 System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
                         + timeToWait / 1000);
                 try {
