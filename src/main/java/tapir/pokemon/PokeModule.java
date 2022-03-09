@@ -22,10 +22,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.sql.SQLOutput;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -33,6 +30,7 @@ public class PokeModule extends ReceiveModule {
 
     private static Pokemon currentPokemon;
     private static JDA bot;
+    private static final int MAXCOUNT = 3;
 
     public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk, JDA bot) {
         super(dbService, allowedChannels, userNotAllowedToAsk);
@@ -44,12 +42,12 @@ public class PokeModule extends ReceiveModule {
         final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
             while (true) {
-                //long timeToWait = 10000;
-                long timeToWait = 0;
+                long timeToWait = 10000;
+                /*long timeToWait = 0;
                 while (timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * oneHourAsMilliSecs);
-                }
+                }*/
                 System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
                         + timeToWait / 1000);
                 try {
@@ -182,7 +180,9 @@ public class PokeModule extends ReceiveModule {
                 "pokémon",
                 "catch",
                 "fangen",
-                "dex"
+                "dex",
+                "pokedex",
+                "pokédex"
         );
     }
 
@@ -197,11 +197,31 @@ public class PokeModule extends ReceiveModule {
 
                 final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                 Pokemon pokemon = currentPokemon;
+                final List<Pokemon> pokemonOfUser =
+                        getDbService().getPokemonOfUser(buttonClickEvent.getInteraction().getUser().getIdLong());
+                int count = 0;
+
+                for (Pokemon pokemon1 : pokemonOfUser) {
+                    if(pokemon.getName().equals(pokemon1.getName())) {
+                        count++;
+                    }
+                }
+
+                final String userName = buttonClickEvent.getInteraction().getMember().getUser().getName();
+                if(count > MAXCOUNT) {
+                    MessageBuilder builder = new MessageBuilder();
+                    builder.append("Sorry ").append(userName).append(", du hast schon ").append(MAXCOUNT)
+                            .append(" Stück!");
+
+                    buttonClickEvent.getChannel().sendMessage(builder.build()).queue();
+                            return;
+                }
+
                 currentPokemon = null;
                 final Message message = new MessageBuilder()
                         .append(buttonClickEvent.getMessage().getContentRaw())
                         .append("\n*")
-                        .append(buttonClickEvent.getInteraction().getMember().getUser().getName())
+                        .append(userName)
                         .append("* hats gefangen!")
                         .build();
                 buttonClickEvent.getMessage().editMessage(message).queue();
