@@ -28,11 +28,14 @@ import java.util.stream.Collectors;
 public class PokeModule extends ReceiveModule {
 
     private static Pokemon currentPokemon;
+    private Integer pokemonMaxFreq;
     private static JDA bot;
     private static final int MAXCOUNT = 3;
 
-    public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk, JDA bot) {
+    public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Integer pokemonMaxFreq,
+                      Set<Long> userNotAllowedToAsk, JDA bot) {
         super(dbService, allowedChannels, userNotAllowedToAsk);
+        this.pokemonMaxFreq = pokemonMaxFreq;
         this.bot = bot;
         startCatchLoop();
     }
@@ -40,12 +43,13 @@ public class PokeModule extends ReceiveModule {
     private void startCatchLoop() {
         final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
+
             while (true) {
                 //long timeToWait = 10000;
                 long timeToWait = 0;
                 while (timeToWait < 300000) {
                     final double random = Math.random();
-                    timeToWait = Math.round(random * oneHourAsMilliSecs);
+                    timeToWait = Math.round(random * pokemonMaxFreq * 1000);
                 }
                 System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
                         + timeToWait / 1000);

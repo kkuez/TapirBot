@@ -28,7 +28,8 @@ public class Main {
 
         bot.addEventListener(new NoPMListener(properties, dbService, bot, allowedChannels, userNotAllowedToAsk));
         bot.addEventListener(new PMListener(properties, dbService, bot, allowedChannels, userNotAllowedToAsk));
-        UserWrapper.init(dbService, allowedChannels, pokeChannels, userNotAllowedToAsk, bot);
+        UserWrapper.init(dbService, allowedChannels, pokeChannels,
+                Integer.parseInt((String) properties.get("pokemonMaxFreq")), userNotAllowedToAsk, bot);
 
         try(Scanner scanner = new Scanner(System.in);)
         {
