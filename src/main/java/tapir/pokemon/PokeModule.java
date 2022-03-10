@@ -211,16 +211,16 @@ public class PokeModule extends ReceiveModule {
 
     private void processPokedex(User user, String[] messages, Optional<Event> event) {
         final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
-        List<Pokemon> pokemonList;
+        Set<Pokemon> pokemonList;
         StringBuilder builder = new StringBuilder("__*");
         if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
             final long id = getUserIdFromMention(messages[2]);
 
-            pokemonList = getDbService().getPokemonOfUser(id);
+            pokemonList = new HashSet<>(getDbService().getPokemonOfUser(id));
             Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
             builder.append(mentionedUser.get("name")).append("* hat");
         } else {
-            pokemonList = getDbService().getPokemonOfUser(user);
+            pokemonList = new HashSet<>(getDbService().getPokemonOfUser(user));
             builder.append(user.getName()).append("*, du hast");
         }
 
@@ -231,7 +231,7 @@ public class PokeModule extends ReceiveModule {
         } else {
             builder.append(" schon **").append(pokemonList.size()).append("**");
         }
-        builder.append(" Pokémon gefangen:__");
+        builder.append(" unterschiedliche Pokémon gefangen:__");
 
         for (Pokemon pokemonFromList : pokemonList) {
             builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")
