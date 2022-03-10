@@ -258,4 +258,14 @@ public class DBService {
         return pokemonList;
     }
 
+    public void removePokemonFromUser(Pokemon pokemonToRemove, User interactedUser) {
+        final String sql = "delete from Pokemons where name like '%" + pokemonToRemove.getName() + "%' " +
+                "and level=" + pokemonToRemove.getLevel() +
+                " and user =" + interactedUser.getIdLong();
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate(sql);
+        } catch (SQLException e) {
+            throw new TapirException("Could not delete pokemon\n" + sql, e);
+        }
+    }
 }

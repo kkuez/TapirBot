@@ -41,12 +41,12 @@ public class PokeModule extends ReceiveModule {
         final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
             while (true) {
-                //long timeToWait = 10000;
-                long timeToWait = 0;
+                long timeToWait = 10000;
+                /*long timeToWait = 0;
                 while (timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * oneHourAsMilliSecs);
-                }
+                }*/
                 System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
                         + timeToWait / 1000);
                 try {
@@ -256,8 +256,9 @@ public class PokeModule extends ReceiveModule {
         final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
         Pokemon pokemon = currentPokemon;
         currentPokemon = null;
+        final User interactedUser = buttonClickEvent.getInteraction().getUser();
         final List<Pokemon> pokemonOfUser =
-                getDbService().getPokemonOfUser(buttonClickEvent.getInteraction().getUser().getIdLong());
+                getDbService().getPokemonOfUser(interactedUser.getIdLong());
         int count = 0;
 
         for (Pokemon pokemon1 : pokemonOfUser) {
@@ -272,6 +273,17 @@ public class PokeModule extends ReceiveModule {
             builder.append("Sorry ").append(userName).append(", du hast schon ").append(MAXCOUNT)
                     .append(" Stück!\n").append(pokemon.getName()).append(" ist entkommen.");
 
+            if(Math.random() > 0.5D) {
+                int countToSteal = 3;
+                builder.append("\n\n...Und was ist das?! \n*Team Rocket* ist erschienen und hat dir **")
+                        .append(countToSteal).append("** zufällige Pokemon stibitzt D:");
+                Collections.shuffle(pokemonOfUser);
+                pokemonOfUser.subList(0, countToSteal).forEach(pokemonToRemove -> {
+                    getDbService().removePokemonFromUser(pokemonToRemove, interactedUser);
+                builder.append("\n**").append(pokemonToRemove.getName())
+                        .append("**, Level:*").append(pokemonToRemove.getLevel()).append("*")
+;                });
+            }
             buttonClickEvent.getChannel().sendMessage(builder.build()).queue();
             return;
         }
