@@ -211,27 +211,28 @@ public class PokeModule extends ReceiveModule {
 
     private void processPokedex(User user, String[] messages, Optional<Event> event) {
         final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
-        Set<Pokemon> pokemonList;
+        List<Pokemon> pokemonList;
         StringBuilder builder = new StringBuilder("__*");
         if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
             final long id = getUserIdFromMention(messages[2]);
 
-            pokemonList = new HashSet<>(getDbService().getPokemonOfUser(id));
+            pokemonList = getDbService().getPokemonOfUser(id);
             Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
             builder.append(mentionedUser.get("name")).append("* hat");
         } else {
-            pokemonList = new HashSet<>(getDbService().getPokemonOfUser(user));
+            pokemonList = getDbService().getPokemonOfUser(user);
             builder.append(user.getName()).append("*, du hast");
         }
 
-        if (pokemonList.size() == 0) {
+        final int size = pokemonList.stream().map(Pokemon::getName).collect(Collectors.toSet()).size();
+        if (size == 0) {
             builder.append(" noch keine");
-        } else if (pokemonList.size() < 50) {
-            builder.append(" erst **").append(pokemonList.size()).append("**");
+        } else if (size < 50) {
+            builder.append(" erst **").append(size).append("** unterschiedliche");
         } else {
-            builder.append(" schon **").append(pokemonList.size()).append("**");
+            builder.append(" schon **").append(size).append("** unterschiedliche");
         }
-        builder.append(" unterschiedliche Pokémon gefangen:__");
+        builder.append(" Pokémon gefangen:__");
 
         for (Pokemon pokemonFromList : pokemonList) {
             builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")
