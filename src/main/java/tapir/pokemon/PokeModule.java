@@ -9,9 +9,10 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
+import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import tapir.DBService;
@@ -20,10 +21,8 @@ import tapir.ReceiveModule;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.sql.SQLOutput;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class PokeModule extends ReceiveModule {
@@ -42,12 +41,12 @@ public class PokeModule extends ReceiveModule {
         final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
             while (true) {
-                long timeToWait = 10000;
-                /*long timeToWait = 0;
+                //long timeToWait = 10000;
+                long timeToWait = 0;
                 while (timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * oneHourAsMilliSecs);
-                }*/
+                }
                 System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
                         + timeToWait / 1000);
                 try {
@@ -118,13 +117,13 @@ public class PokeModule extends ReceiveModule {
                      new BufferedInputStream(new URL(currentPokemon.getPictureUrlString()).openStream())) {
             bis.transferTo(fos);
             getGeneralChannels().forEach(channel -> {
-                        final MessageAction messageAction = channel
-                                .sendMessage("Ein wildes **" + currentPokemon.getName() + "** ist erschienen!");
-                        messageAction
-                                .addFile(pictureTemp)
-                                .setActionRow(Button.primary("poke catch", "Fangen!"))
-                                .queue();
-                    });
+                final MessageAction messageAction = channel
+                        .sendMessage("Ein wildes **" + currentPokemon.getName() + "** ist erschienen!");
+                messageAction
+                        .addFile(pictureTemp)
+                        .setActionRow(Button.primary("poke catch", "Fangen!"))
+                        .queue();
+            });
             pictureTemp.delete();
         } catch (IOException e) {
             e.printStackTrace();
@@ -191,78 +190,100 @@ public class PokeModule extends ReceiveModule {
 
         switch (messages[1].toLowerCase()) {
             case "catch":
-                if (currentPokemon == null) {
-                    return;
-                }
-
-                final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
-                Pokemon pokemon = currentPokemon;
-                final List<Pokemon> pokemonOfUser =
-                        getDbService().getPokemonOfUser(buttonClickEvent.getInteraction().getUser().getIdLong());
-                int count = 0;
-
-                for (Pokemon pokemon1 : pokemonOfUser) {
-                    if(pokemon.getName().equals(pokemon1.getName())) {
-                        count++;
-                    }
-                }
-
-                final String userName = buttonClickEvent.getInteraction().getMember().getUser().getName();
-                if(count > MAXCOUNT) {
-                    MessageBuilder builder = new MessageBuilder();
-                    builder.append("Sorry ").append(userName).append(", du hast schon ").append(MAXCOUNT)
-                            .append(" Stück!");
-
-                    buttonClickEvent.getChannel().sendMessage(builder.build()).queue();
-                            return;
-                }
-
-                currentPokemon = null;
-                final Message message = new MessageBuilder()
-                        .append(buttonClickEvent.getMessage().getContentRaw())
-                        .append("\n*")
-                        .append(userName)
-                        .append("* hats gefangen!")
-                        .build();
-                buttonClickEvent.getMessage().editMessage(message).queue();
-
-                getDbService().registerCaughtPokemon(user, pokemon);
+                processCatch(user, event);
                 break;
             case "dex":
             case "pokedex":
             case "pokédex":
-                final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
-                List<Pokemon> pokemonList;
-                StringBuilder builder = new StringBuilder("__*");
-                if(messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
-                        final String userIdString = messages[2].replace("<@!", "").replace(">", "");
-                        final long id = Long.parseLong(userIdString);
-                        pokemonList = getDbService().getPokemonOfUser(id);
-                        Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
-                        builder.append(mentionedUser.get("name")).append("* hat");
-                } else {
-                    pokemonList = getDbService().getPokemonOfUser(user);
-                    builder.append(user.getName()).append("*, du hast");
-                }
-
-                if (pokemonList.size() == 0) {
-                    builder.append(" noch keine");
-                } else if (pokemonList.size() < 50) {
-                    builder.append(" erst **").append(pokemonList.size()).append("**");
-                } else {
-                    builder.append(" schon **").append(pokemonList.size()).append("**");
-                }
-                builder.append(" Pokémon gefangen:__");
-
-                for (Pokemon pokemonFromList : pokemonList) {
-                    builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")
-                            .append(pokemonFromList.getName()).append("**, Level: *").append(pokemonFromList.getLevel())
-                            .append("*");
-                }
-
-                guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
+                processPokedex(user, messages, event);
+                break;
+            case "swap":
+                if(messages.length != 3) return;
+                final long idFromMention = getUserIdFromMention(messages[2]);
+                final RestAction<PrivateChannel> privateChannelRestAction = event.get().getJDA().openPrivateChannelById(idFromMention);
+                MessageBuilder testBuilder = new MessageBuilder("asd");
+                final Message build = testBuilder.setActionRows(ActionRow.of(Button.primary("asd", "asd"))).build();
+                final GuildMessageReceivedEvent event1 = (GuildMessageReceivedEvent) event.get();
+                event1.getMessage().getAuthor().openPrivateChannel().queue((channel1) -> channel1.sendMessage(build).queue());
                 break;
         }
+    }
+
+    private void processPokedex(User user, String[] messages, Optional<Event> event) {
+        final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
+        List<Pokemon> pokemonList;
+        StringBuilder builder = new StringBuilder("__*");
+        if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
+            final long id = getUserIdFromMention(messages[2]);
+
+            pokemonList = getDbService().getPokemonOfUser(id);
+            Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
+            builder.append(mentionedUser.get("name")).append("* hat");
+        } else {
+            pokemonList = getDbService().getPokemonOfUser(user);
+            builder.append(user.getName()).append("*, du hast");
+        }
+
+        if (pokemonList.size() == 0) {
+            builder.append(" noch keine");
+        } else if (pokemonList.size() < 50) {
+            builder.append(" erst **").append(pokemonList.size()).append("**");
+        } else {
+            builder.append(" schon **").append(pokemonList.size()).append("**");
+        }
+        builder.append(" Pokémon gefangen:__");
+
+        for (Pokemon pokemonFromList : pokemonList) {
+            builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")
+                    .append(pokemonFromList.getName()).append("**, Level: *").append(pokemonFromList.getLevel())
+                    .append("*");
+        }
+
+        guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
+    }
+
+    private long getUserIdFromMention(String message) {
+        final String userIdString = message.replace("<@!", "").replace(">", "");
+        return Long.parseLong(userIdString);
+    }
+
+    private void processCatch(User user, Optional<Event> event) {
+        if (currentPokemon == null) {
+            return;
+        }
+
+        final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+        Pokemon pokemon = currentPokemon;
+        currentPokemon = null;
+        final List<Pokemon> pokemonOfUser =
+                getDbService().getPokemonOfUser(buttonClickEvent.getInteraction().getUser().getIdLong());
+        int count = 0;
+
+        for (Pokemon pokemon1 : pokemonOfUser) {
+            if (pokemon.getName().equals(pokemon1.getName())) {
+                count++;
+            }
+        }
+
+        final String userName = buttonClickEvent.getInteraction().getMember().getUser().getName();
+        if (count > MAXCOUNT) {
+            MessageBuilder builder = new MessageBuilder();
+            builder.append("Sorry ").append(userName).append(", du hast schon ").append(MAXCOUNT)
+                    .append(" Stück!\n").append(pokemon.getName()).append(" ist entkommen.");
+
+            buttonClickEvent.getChannel().sendMessage(builder.build()).queue();
+            return;
+        }
+
+        final Message message = new MessageBuilder()
+                .append(buttonClickEvent.getMessage().getContentRaw())
+                .append("\n*")
+                .append(userName)
+                .append("* hats gefangen!")
+                .build();
+        buttonClickEvent.getMessage().editMessage(message).queue();
+
+        getDbService().registerCaughtPokemon(user, pokemon);
     }
 
     @Override
@@ -273,5 +294,37 @@ public class PokeModule extends ReceiveModule {
     @Override
     public void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel) {
 
+    }
+
+    private class SwapPair {
+        private User from;
+        private User to;
+        private SwapStatus status;
+
+        public SwapPair(User from, User to) {
+            this.from = from;
+            this.to = to;
+            status = SwapStatus.NONE;
+        }
+
+        public User getFrom() {
+            return from;
+        }
+
+        public User getTo() {
+            return to;
+        }
+
+        public SwapStatus getStatus() {
+            return status;
+        }
+
+        public void setStatus(SwapStatus status) {
+            this.status = status;
+        }
+    }
+
+    private enum SwapStatus {
+        NONE, USER_ONE_TO_SWAP, BOTH_ACCEPTED_POKEMON_SELECT, USER_ONE_ACCEPTED_EXCHANGE;
     }
 }
