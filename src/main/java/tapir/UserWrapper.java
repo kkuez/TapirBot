@@ -53,7 +53,7 @@ public class UserWrapper {
             case "poke":
                 modules.computeIfAbsent(PokeModule.class, pokeClass -> {
                     return pokeModule;
-                }).handle(event.getInteraction().getMember().getUser(),
+                }).handle(event.getUser(),
                         event.getButton().getId().split(" "), event.getTextChannel(), Optional.of(event));
                 break;
         }

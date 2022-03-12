@@ -44,13 +44,11 @@ public abstract class TapirListener extends ListenerAdapter {
     @Override
     public void onButtonClick(ButtonClickEvent event) {
          doUserCheck(event.getUser());
-         doUserCheck(event.getInteraction().getMember().getUser());
          String buttonId = doButtonStringValidityCheck(event);
 
          //TODO Ab hbier mal refactorn
         final String[] split = buttonId.split(QuizModule.MESSAGE_SEPERATOR + "");
-        final String userIdString = split[0];
-        getUserWrapperMap().get(event.getInteraction().getMember().getUser().getId()).handleButton(event, split);
+        getUserWrapperMap().get(event.getUser().getId()).handleButton(event, split);
     }
 
     /**
