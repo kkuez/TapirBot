@@ -22,6 +22,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -273,11 +274,15 @@ public class PokeModule extends ReceiveModule {
     }
 
     private String createPokedexPage(List<Pokemon> pokemonList, String username) throws IOException {
+        final LocalDateTime now = LocalDateTime.now().withNano(0);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm:ss");
         StringBuilder builder = new StringBuilder("<html><head><meta charset=\"utf-8\"><title>")
                 .append(username)
-                .append("s Pokedex</title></head><body style=\"background-color:#36393f;\">" +
-                        "<table style=\"color:#fff\"><tr><th>IndexNr.<th>" +
-                        "</th><th>Name</th><th>Level</th></tr>");
+                .append("s Pokedex</title></head><body style=\"background-color:#36393f;\">")
+                .append("<center><font style=\"color:#fff\"><b><h2>").append(username).append("s Pokedex vom ")
+                .append(now.format(formatter)).append(" Uhr:</h2></b></font>")
+                .append("<table style=\"color:#fff\"><tr><th>IndexNr.<th>")
+                .append("</th><th>Name</th><th>Level</th></tr>");
 
         for (Pokemon pokemonFromList : pokemonList) {
             builder.append("\n<tr><th>").append(pokemonFromList.getPokedexIndex()).append("</th><th>")
@@ -287,7 +292,7 @@ public class PokeModule extends ReceiveModule {
                     .append("</th></tr>");
         }
 
-        builder.append("</table></body></html>");
+        builder.append("</table></center></body></html>");
         final File file = new File("pokedexe", username.replace(" ", "") + ".html");
         if(file.exists()) {
             file.delete();
