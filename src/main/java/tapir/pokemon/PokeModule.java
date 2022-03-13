@@ -238,43 +238,68 @@ public class PokeModule extends ReceiveModule {
         final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
         List<Pokemon> pokemonList;
         StringBuilder builder = new StringBuilder("__*");
-        if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
-            final long id = getUserIdFromMention(messages[2]);
+        // TODO das riesiege try catch begrenzen
+        try {
+            final String pokedexURL;
+            if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
+                final long id = getUserIdFromMention(messages[2]);
 
-            pokemonList = getDbService().getPokemonOfUser(id);
-            Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
-            builder.append(mentionedUser.get("name")).append("* hat");
-        } else {
-            pokemonList = getDbService().getPokemonOfUser(user);
-            builder.append(user.getName()).append("*, du hast");
-        }
+                pokemonList = getDbService().getPokemonOfUser(id);
+                Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
+                builder.append(mentionedUser.get("name")).append("* hat");
+                pokedexURL = createPokedexPage(pokemonList, mentionedUser.get("name"));
 
-        final int size = pokemonList.stream().map(Pokemon::getName).collect(Collectors.toSet()).size();
-        if (size == 0) {
-            builder.append(" noch keine");
-        } else if (size < 50) {
-            builder.append(" erst **").append(size).append("** unterschiedliche");
-        } else {
-            builder.append(" schon **").append(size).append("** unterschiedliche");
-        }
-        builder.append(" Pokémon gefangen:__");
-
-        // Regardless of level
-        int maxPokemonPerMessage = 50;
-        int i = 0;
-        for (Pokemon pokemonFromList : pokemonList) {
-            builder.append("\n").append(pokemonFromList.getPokedexIndex()).append(": **")
-                    .append(pokemonFromList.getName()).append("**, Level: *").append(pokemonFromList.getLevel())
-                    .append("*");
-            i++;
-            if(i % maxPokemonPerMessage == 0) {
-                guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
-                builder.delete(0, builder.length());
-                builder.append("...");
+            } else {
+                pokemonList = getDbService().getPokemonOfUser(user);
+                builder.append(user.getName()).append("*, du hast");
+                pokedexURL = createPokedexPage(pokemonList, user.getName());
             }
+
+            final int size = pokemonList.stream().map(Pokemon::getName).collect(Collectors.toSet()).size();
+            if (size == 0) {
+                builder.append(" noch keine");
+            } else if (size < 50) {
+                builder.append(" erst **").append(size).append("** unterschiedliche");
+            } else {
+                builder.append(" schon **").append(size).append("** unterschiedliche");
+            }
+            builder.append(" Pokémon gefangen:__\n").append(pokedexURL);
+
+            guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
-        guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
+    }
+
+    private String createPokedexPage(List<Pokemon> pokemonList, String username) throws IOException {
+        StringBuilder builder = new StringBuilder("<html><head><meta charset=\"utf-8\"><title>")
+                .append(username)
+                .append("s Pokedex</title></head><body style=\"background-color:#36393f;\">" +
+                        "<table style=\"color:#fff\"><tr><th>IndexNr.<th>" +
+                        "</th><th>Name</th><th>Level</th></tr>");
+
+        for (Pokemon pokemonFromList : pokemonList) {
+            builder.append("\n<tr><th>").append(pokemonFromList.getPokedexIndex()).append("</th><th>")
+                    .append("<img src=\"").append(pokemonFromList.getPictureUrlString())
+                    .append("\"  width=\"30\" height=\"30\">").append("</th><th>")
+                    .append(pokemonFromList.getName()).append("</th><th>").append(pokemonFromList.getLevel())
+                    .append("</th></tr>");
+        }
+
+        builder.append("</table></body></html>");
+        final File file = new File("pokedexe", username.replace(" ", "") + ".html");
+        if(file.exists()) {
+            file.delete();
+        }
+        file.createNewFile();
+        try (final BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(file))) {
+            bos.write(builder.toString().getBytes());
+            bos.flush();
+            System.out.println("Written " + file.getAbsolutePath());
+        }
+
+        return "http://nussbot.kkuez.de/" + file.getName();
     }
 
     private long getUserIdFromMention(String message) {
