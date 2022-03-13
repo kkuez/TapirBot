@@ -53,8 +53,8 @@ public class PokeModule extends ReceiveModule {
                     final double random = Math.random();
                     timeToWait = Math.round(random * pokemonMaxFreq * 1000);
                 }
-                System.out.println(LocalDateTime.now().withNano(0).toString() + " Starting new Pokemon-Loop, waiting "
-                        + timeToWait / 1000);
+                System.out.println("Starting new Pokemon-Loop, next pokemon: "
+                        + LocalDateTime.now().plusSeconds(timeToWait / 1000));
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
