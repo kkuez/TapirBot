@@ -2,10 +2,7 @@ package tapir.quiz;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.PrivateChannel;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -53,7 +50,7 @@ public class QuizModule extends ReceiveModule {
     }
 
     @Override
-    public void handle(User user, String[] messages, TextChannel channel, Optional<Event> event) {
+    public void handle(User user, String[] messages, MessageChannel channel, Optional<Event> event) {
         if (messages.length > 1 && status == QuizStatus.NONE) {
             switch (messages[1].toLowerCase()) {
                 case "help":
@@ -117,7 +114,7 @@ public class QuizModule extends ReceiveModule {
         question = null;
     }
 
-    private void help(TextChannel channel) {
+    private void help(MessageChannel channel) {
         String helpText = "Willkommen zum Quizmodul des TapirBots!" +
                 "\nEs gibt folgende Befehle:" +
                 "\n\t__Allgemeiner Channel:__" +
@@ -153,7 +150,7 @@ public class QuizModule extends ReceiveModule {
     }
 
     @Override
-    public void handlePM(User user, String message, JDA bot, PrivateChannel channel) {
+    public void handlePM(User user, String message, JDA bot, PrivateChannel channel, Optional<Event> event) {
         final String[] messages = message.split(MESSAGE_SEPERATOR);
         if (message.toLowerCase().equals("abbruch")) {
             cancel(channel);
@@ -225,7 +222,7 @@ public class QuizModule extends ReceiveModule {
         status = QuizStatus.WAITING_QUESTION_ANSWERS;
     }
 
-    private void info(TextChannel channel, boolean global) {
+    private void info(MessageChannel channel, boolean global) {
         List<RankingTableEntry> userScores = getDbService().getUserScoresPointRated();
 
         if(!global) {
@@ -286,8 +283,9 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-    private void filterMembers(TextChannel channel, List<RankingTableEntry> userScores) {
-        final Set<Long> memberInChanIds = channel.getMembers().stream()
+    private void filterMembers(MessageChannel channel, List<RankingTableEntry> userScores) {
+        TextChannel textChannel = (TextChannel) channel;
+        final Set<Long> memberInChanIds = textChannel.getMembers().stream()
                 .map(member -> member.getIdLong()).collect(Collectors.toSet());
 
         for(int i =0;i<userScores.size();i++) {

@@ -1,6 +1,7 @@
 package tapir;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.MessageChannel;
 import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
@@ -27,11 +28,9 @@ public abstract class ReceiveModule {
 
     public abstract Set<String> getCommands();
 
-    public abstract void handle(User user, String[] messages, TextChannel channel, Optional<Event> event);
+    public abstract void handle(User user, String[] messages, MessageChannel channel, Optional<Event> event);
 
     public abstract boolean waitingForAnswer();
-
-    public abstract void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel);
 
     public Set<TextChannel> getGeneralChannels() {
         return generalChannels;
@@ -48,4 +47,6 @@ public abstract class ReceiveModule {
     public static ExecutorService getExecutorService() {
         return EXECUTOR_SERVICE;
     }
+
+    public abstract void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel, Optional<Event> event);
 }

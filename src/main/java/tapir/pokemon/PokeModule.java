@@ -2,13 +2,11 @@ package tapir.pokemon;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
-import net.dv8tion.jda.api.entities.Message;
-import net.dv8tion.jda.api.entities.PrivateChannel;
-import net.dv8tion.jda.api.entities.TextChannel;
-import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.api.requests.RestAction;
@@ -45,7 +43,6 @@ public class PokeModule extends ReceiveModule {
     private void startCatchLoop() {
         final Runnable loopRunnable = () -> {
             long oneHourAsMilliSecs = 3600000;
-
             while (true) {
                 //long timeToWait = 10000;
                 long timeToWait = 0;
@@ -54,7 +51,7 @@ public class PokeModule extends ReceiveModule {
                     timeToWait = Math.round(random * pokemonMaxFreq * 1000);
                 }
                 System.out.println("Starting new Pokemon-Loop, next pokemon: "
-                        + LocalDateTime.now().plusSeconds(timeToWait / 1000));
+                        + LocalDateTime.now().plusSeconds(timeToWait / 1000).withNano(0).toString());
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
@@ -187,12 +184,14 @@ public class PokeModule extends ReceiveModule {
                 "fangen",
                 "dex",
                 "pokedex",
-                "pokédex"
+                "pokédex",
+                "swap",
+                "free"
         );
     }
 
     @Override
-    public void handle(User user, String[] messages, TextChannel channel, Optional<Event> event) {
+    public void handle(User user, String[] messages, MessageChannel channel, Optional<Event> event) {
 
         switch (messages[1].toLowerCase()) {
             case "catch":
@@ -226,16 +225,70 @@ public class PokeModule extends ReceiveModule {
                             .append(toUser.getName()).append("...");
                     fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
                             .queue());
-                } else {
-
                 }
-
-
+                break;
+            case "free":
+                if(messages.length == 2) {
+                    postGeneralFreeMessage(user);
+                } else {
+                    final String[] codesToDelete = messages[2].split(",");
+                    final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
+                    for (String pokemonCode : codesToDelete) {
+                        getDbService().removePokemonFromUser(codeMap.get(pokemonCode), user);
+                    }
+                    user.openPrivateChannel().queue((channel1) -> channel1.sendMessage("Pokemon freigelassen!")
+                            .queue());
+                }
                 break;
         }
     }
 
+    private void postGeneralFreeMessage(User user) {
+        final List<Pokemon> pokemonOfUser = getDbService().getPokemonOfUser(user);
+
+        final MessageBuilder builder = new MessageBuilder("Welches Pokemon willst du " +
+                "freilassen?\nSchreibe mir die Codes mit !p free <CODE> (wenn du mehrere Pokemons freilassen " +
+                "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!");
+
+        Map<String, Pokemon> codeMap = getCodeMap(pokemonOfUser);
+        List<String> codeMapKeys = codeMap.keySet().stream().collect(Collectors.toList());
+        Collections.sort(codeMapKeys);
+
+        int index = 0;
+        for (String codeMapKey : codeMapKeys) {
+            final Pokemon pokemon = codeMap.get(codeMapKey);
+            builder.append("\n" + codeMapKey + " \t| " + pokemon.getName() + " Lvl. " + pokemon.getLevel());
+            if (index != 0 && (index % 50 == 0 || codeMapKeys.size() == index + 1)) {
+                user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(builder.build()).queue());
+                builder.setContent("");
+            }
+            index++;
+        }
+    }
+
+    private Map<String, Pokemon> getCodeMap(List<Pokemon> pokemonOfUser) {
+        Map<String, Pokemon> codeMap = new HashMap<>(pokemonOfUser.size());
+        char a = 97;
+        char aa = 97;
+        for(Pokemon pokemon: pokemonOfUser) {
+            codeMap.put(a + "" + aa, pokemon);
+            aa++;
+            if(aa == 122) {
+                aa = 97;
+                a++;
+            }
+        }
+        return codeMap;
+    }
+
     private void processPokedex(User user, String[] messages, Optional<Event> event) {
+        if(!(event.get() instanceof GuildMessageReceivedEvent)) {
+            //TODO
+            user.openPrivateChannel().queue((channel1) -> channel1.sendMessage("!p dex ist leider nicht in privaten" +
+                    " Nachrichten möglich :/ (Aber auf der TODO Liste!)").queue());
+            return;
+        }
+
         final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
         List<Pokemon> pokemonList;
         StringBuilder builder = new StringBuilder("__*");
@@ -370,8 +423,8 @@ public class PokeModule extends ReceiveModule {
     }
 
     @Override
-    public void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel) {
-
+    public void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel, Optional<Event> eventOpt) {
+            handle(user, toLowerCase.split(" "), channel, eventOpt);
     }
 
     private class Swap {

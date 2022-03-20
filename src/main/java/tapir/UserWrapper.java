@@ -99,7 +99,7 @@ public class UserWrapper {
             case "quiz":
                 modules.computeIfAbsent(QuizModule.class, quizClass -> new QuizModule(dbService, allowedChannels,
                         userNotAllowedToAsk)).handlePM(user,
-                        fullWithoutAusrufezeichen, bot, event.getChannel());
+                        fullWithoutAusrufezeichen, bot, event.getChannel(), Optional.empty());
                 break;
             case "p":
             case "poke":
@@ -108,12 +108,11 @@ public class UserWrapper {
             case "pokémon":
                 //Direkt adressing as there is only one global PokeModul in opposite to the many Quizmudols.
                 //TODO Refactorn (s. oben)?
-                pokeModule.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel());
+                pokeModule.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel(), Optional.of(event));
                 break;
             default:
                 for (ReceiveModule module : modules.values()) {
-                    module.handlePM(user, fullWithoutAusrufezeichen,
-                            bot, event.getChannel());
+                    module.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel(), Optional.of(event));
                 }
         }
     }
