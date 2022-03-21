@@ -391,16 +391,16 @@ public class PokeModule extends ReceiveModule {
                     .append(" Stück!\n").append(pokemon.getName()).append(" ist entkommen.");
 
             if (Math.random() > 0.5D) {
-                int countToSteal = 3;
+                int countToSteal = 5;
                 builder.append("\n\n...Und was ist das?! \n*Team Rocket* ist erschienen und hat dir **")
                         .append(countToSteal).append("** zufällige Pokemon stibitzt D:");
                 Collections.shuffle(pokemonOfUser);
                 pokemonOfUser.subList(0, countToSteal).forEach(pokemonToRemove -> {
                     getDbService().removePokemonFromUser(pokemonToRemove, interactedUser);
                     builder.append("\n**").append(pokemonToRemove.getName())
-                            .append("**, Level:*").append(pokemonToRemove.getLevel()).append("*")
-                    ;
+                            .append("**, Level:*").append(pokemonToRemove.getLevel()).append("*");
                 });
+                builder.append("\nhttps://www.pokewiki.de/images/7/77/Team_Rocket_Anime.jpg");
             }
             buttonClickEvent.getChannel().sendMessage(builder.build()).queue();
             return;
