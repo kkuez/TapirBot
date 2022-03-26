@@ -16,6 +16,7 @@ import org.json.JSONObject;
 import tapir.DBService;
 import tapir.ReceiveModule;
 
+import javax.swing.text.html.Option;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -30,7 +31,7 @@ public class PokeModule extends ReceiveModule {
     private Integer pokemonMaxFreq;
     private static JDA bot;
     private static final int MAXCOUNT = 3;
-    private static final Map<UUID, Swap> SWAP_PAIRS = new HashMap<>(4);
+    private static final Set<Swap> SWAP_PAIRS = new HashSet<>(2);
 
     public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Integer pokemonMaxFreq,
                       Set<Long> userNotAllowedToAsk, JDA bot) {
@@ -204,7 +205,15 @@ public class PokeModule extends ReceiveModule {
                 break;
             case "swap":
                 if (messages.length < 3) return;
-                if (messages.length == 3) {
+
+                Optional<Swap> swapPairOpt = Optional.empty();
+                try {
+                    swapPairOpt = SWAP_PAIRS.stream().filter(sp -> sp.getUuid().equals(UUID.fromString(messages[2]))).findAny();
+                } catch (Exception e) {
+                    System.out.println();
+                }
+
+                if (swapPairOpt.isEmpty()) {
                     final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
                     final User fromUser = guildMessageReceivedEvent.getAuthor();
                     final User toUser = event.get().getJDA().getUserById(getUserIdFromMention(messages[2]));
@@ -212,7 +221,7 @@ public class PokeModule extends ReceiveModule {
                             event.get().getJDA().openPrivateChannelById(toUser.getIdLong());
 
                     final Swap swapPair = new Swap(fromUser, toUser);
-                    SWAP_PAIRS.put(swapPair.getUuid(), swapPair);
+                    SWAP_PAIRS.add(swapPair);
 
                     MessageBuilder toMessageBuilder = new MessageBuilder(fromUser.getName()).append(" fragt dich ob du " +
                             "Pokemon tauschen möchtest?");
@@ -225,10 +234,12 @@ public class PokeModule extends ReceiveModule {
                             .append(toUser.getName()).append("...");
                     fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
                             .queue());
+                } else {
+                    swapPairOpt.get().process(messages, user);
                 }
                 break;
             case "free":
-                if(messages.length == 2) {
+                if (messages.length == 2) {
                     postGeneralFreeMessage(user);
                 } else {
                     final String[] codesToDelete = messages[2].split(",");
@@ -270,10 +281,10 @@ public class PokeModule extends ReceiveModule {
         Map<String, Pokemon> codeMap = new HashMap<>(pokemonOfUser.size());
         char a = 97;
         char aa = 97;
-        for(Pokemon pokemon: pokemonOfUser) {
+        for (Pokemon pokemon : pokemonOfUser) {
             codeMap.put(a + "" + aa, pokemon);
             aa++;
-            if(aa == 122) {
+            if (aa == 122) {
                 aa = 97;
                 a++;
             }
@@ -282,7 +293,7 @@ public class PokeModule extends ReceiveModule {
     }
 
     private void processPokedex(User user, String[] messages, Optional<Event> event) {
-        if(!(event.get() instanceof GuildMessageReceivedEvent)) {
+        if (!(event.get() instanceof GuildMessageReceivedEvent)) {
             //TODO
             user.openPrivateChannel().queue((channel1) -> channel1.sendMessage("!p dex ist leider nicht in privaten" +
                     " Nachrichten möglich :/ (Aber auf der TODO Liste!)").queue());
@@ -292,7 +303,7 @@ public class PokeModule extends ReceiveModule {
         final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
         List<Pokemon> pokemonList;
         StringBuilder builder = new StringBuilder("__*");
-        // TODO das riesiege try catch begrenzen
+        // TODO das riesige try catch begrenzen
         try {
             final String pokedexURL;
             if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
@@ -347,7 +358,7 @@ public class PokeModule extends ReceiveModule {
 
         builder.append("</table></center></body></html>");
         final File file = new File("pokedexe", username.replace(" ", "") + ".html");
-        if(file.exists()) {
+        if (file.exists()) {
             file.delete();
         }
         file.createNewFile();
@@ -374,8 +385,7 @@ public class PokeModule extends ReceiveModule {
         Pokemon pokemon = currentPokemon;
         currentPokemon = null;
         final User interactedUser = buttonClickEvent.getInteraction().getUser();
-        final List<Pokemon> pokemonOfUser =
-                getDbService().getPokemonOfUser(interactedUser.getIdLong());
+        final List<Pokemon> pokemonOfUser = getDbService().getPokemonOfUser(interactedUser.getIdLong());
         int count = 0;
 
         for (Pokemon pokemon1 : pokemonOfUser) {
@@ -424,20 +434,20 @@ public class PokeModule extends ReceiveModule {
 
     @Override
     public void handlePM(User user, String toLowerCase, JDA bot, PrivateChannel channel, Optional<Event> eventOpt) {
-            handle(user, toLowerCase.split(" "), channel, eventOpt);
+        handle(user, toLowerCase.split(" "), channel, eventOpt);
     }
 
     private class Swap {
         private User from;
         private User to;
-        private SwapStatus status;
-        private UUID uuid;
+        private List<Pokemon> fromUserSwapPokemons;
+        private List<Pokemon> toUserSwapPokemons;
+        private SwapStatus status = SwapStatus.AWAITING_USER_TWO_SWAP_GRANT;
+        private UUID uuid = UUID.randomUUID();
 
         public Swap(User from, User to) {
             this.from = from;
             this.to = to;
-            status = SwapStatus.AWAITING_USER_TWO_SWAP_GRANT;
-            uuid = UUID.randomUUID();
         }
 
         public User getFrom() {
@@ -459,9 +469,91 @@ public class PokeModule extends ReceiveModule {
         public UUID getUuid() {
             return uuid;
         }
+
+        boolean containsUsers(User... users) {
+            boolean fromUserContained = false;
+            boolean toUserContained = false;
+            for (User user : users) {
+                if (!fromUserContained && from.equals(user)) {
+                    fromUserContained = true;
+                }
+
+                if (!toUserContained && to.equals(user)) {
+                    toUserContained = true;
+                }
+
+                if (fromUserContained && toUserContained) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public void process(String[] messages, User user) {
+            switch (status) {
+                case AWAITING_USER_TWO_SWAP_GRANT:
+                    final boolean yes = messages[3].equals("Ja");
+                    if (!yes) {
+                        SWAP_PAIRS.remove(this);
+                        return;
+                    }
+
+                    final Map<String, Pokemon> fromCodeMap = getCodeMap(getDbService().getPokemonOfUser(from));
+                    final MessageBuilder fromBuilder = new MessageBuilder("Welches Pokemon willst du " +
+                            "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons tauschen " +
+                            "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!");
+
+                    List<String> fromCodeMapKeys = fromCodeMap.keySet().stream().collect(Collectors.toList());
+                    Collections.sort(fromCodeMapKeys);
+
+                    int index = 0;
+                    for (String codeMapKey : fromCodeMapKeys) {
+                        final Pokemon pokemon = fromCodeMap.get(codeMapKey);
+                        fromBuilder.append("\n" + codeMapKey + " \t| " + pokemon.getName() + " Lvl. " + pokemon.getLevel());
+                        if (index != 0 && (index % 50 == 0 || fromCodeMapKeys.size() == index + 1)) {
+                            from.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromBuilder.build()).queue());
+                            fromBuilder.setContent("");
+                        }
+                        index++;
+                    }
+
+                    final Map<String, Pokemon> toCodeMap = getCodeMap(getDbService().getPokemonOfUser(to));
+                    final MessageBuilder toBuilder = new MessageBuilder("Welches Pokemon willst du " +
+                            "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons freilassen " +
+                            "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!\n" +
+                            ":octagonal_sign: Es empfiehlt sich, dass du mehrere Pokemon auf einmal freilässt. Wenn du " +
+                            "sie einzeln freilässt, dann mache zwischen jedem freilassen ein !p free um eine " +
+                            "aktualisierte CodeListe zu erhalten. :octagonal_sign: ");
+
+                    List<String> toCodeMapKeys = toCodeMap.keySet().stream().collect(Collectors.toList());
+                    Collections.sort(toCodeMapKeys);
+
+                    index = 0;
+                    for (String codeMapKey : toCodeMapKeys) {
+                        final Pokemon pokemon = toCodeMap.get(codeMapKey);
+                        toBuilder.append("\n" + codeMapKey + " \t| " + pokemon.getName() + " Lvl. " + pokemon.getLevel());
+                        if (index != 0 && (index % 50 == 0 || toCodeMapKeys.size() == index + 1)) {
+                            to.openPrivateChannel().queue((channel1) -> channel1.sendMessage(toBuilder.build()).queue());
+                            toBuilder.setContent("");
+                        }
+                        index++;
+                    }
+                    status = SwapStatus.FIRST_USER_OFFER;
+                    break;
+                case FIRST_USER_OFFER:
+                    break;
+                case SECOND_USER_OFFER:
+                    break;
+                case BOTH_ACCEPTED_POKEMON_SELECT:
+                    break;
+                case FIRST_USER_ACCEPTED_EXCHANGE:
+                    break;
+            }
+        }
     }
 
     private enum SwapStatus {
-        AWAITING_USER_TWO_SWAP_GRANT, USER_ONE_TO_SWAP, BOTH_ACCEPTED_POKEMON_SELECT, USER_ONE_ACCEPTED_EXCHANGE;
+        AWAITING_USER_TWO_SWAP_GRANT, FIRST_USER_OFFER, SECOND_USER_OFFER,
+        BOTH_ACCEPTED_POKEMON_SELECT, FIRST_USER_ACCEPTED_EXCHANGE;
     }
 }
