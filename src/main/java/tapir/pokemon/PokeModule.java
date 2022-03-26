@@ -136,9 +136,9 @@ public class PokeModule extends ReceiveModule {
 
     private Pokemon getPokemon() throws IOException {
         long index = 0;
-        while (index == 0) {
+        while (index == 0 || index == 152) {
             double random = Math.random();
-            index = Math.round(151 * random);
+            index = Math.round(152 * random);
         }
 
         JSONObject json;
@@ -260,9 +260,9 @@ public class PokeModule extends ReceiveModule {
         final MessageBuilder builder = new MessageBuilder("Welches Pokemon willst du " +
                 "freilassen?\nSchreibe mir die Codes mit !p free <CODE> (wenn du mehrere Pokemons freilassen " +
                 "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!");
-        builder.append(":octagonal_sign: \n*__Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
+        builder.append("\n:octagonal_sign: __Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
                 " einzeln freilassen wollen, mache nach jedem Pokémon ein !p free um eine aktualisierte Codeliste" +
-                " zu bekommen*__ :octagonal_sign: ");
+                " zu bekommen__ :octagonal_sign: ");
 
         Map<String, Pokemon> codeMap = getCodeMap(pokemonOfUser);
         List<String> codeMapKeys = codeMap.keySet().stream().collect(Collectors.toList());
