@@ -260,6 +260,9 @@ public class PokeModule extends ReceiveModule {
         final MessageBuilder builder = new MessageBuilder("Welches Pokemon willst du " +
                 "freilassen?\nSchreibe mir die Codes mit !p free <CODE> (wenn du mehrere Pokemons freilassen " +
                 "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!");
+        builder.append(":octagonal_sign: \n*__Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
+                " einzeln freilassen wollen, mache nach jedem Pokémon ein !p free um eine aktualisierte Codeliste" +
+                " zu bekommen*__ :octagonal_sign: ");
 
         Map<String, Pokemon> codeMap = getCodeMap(pokemonOfUser);
         List<String> codeMapKeys = codeMap.keySet().stream().collect(Collectors.toList());
@@ -269,7 +272,7 @@ public class PokeModule extends ReceiveModule {
         for (String codeMapKey : codeMapKeys) {
             final Pokemon pokemon = codeMap.get(codeMapKey);
             builder.append("\n" + codeMapKey + " \t| " + pokemon.getName() + " Lvl. " + pokemon.getLevel());
-            if (index != 0 && (index % 50 == 0 || codeMapKeys.size() == index + 1)) {
+            if (index != 0 && (index % 50 == 0 || codeMapKeys.size() == index + 1) && !builder.isEmpty()) {
                 user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(builder.build()).queue());
                 builder.setContent("");
             }
