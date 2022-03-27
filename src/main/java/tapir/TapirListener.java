@@ -5,6 +5,8 @@ import net.dv8tion.jda.api.entities.Member;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
+import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import tapir.quiz.QuizModule;
 
@@ -29,11 +31,27 @@ public abstract class TapirListener extends ListenerAdapter {
         this.userNotAllowedToAsk = userNotAllowedToAsk;
     }
 
+    void logEvent(GuildMessageReceivedEvent event) {
+        log(event.getAuthor(), event.getMessage().getContentRaw());
+    }
+
+    void logEvent(ButtonClickEvent event) {
+        log(event.getUser(), event.getInteraction().getComponent().getId());
+    }
+
+    void logEvent(PrivateMessageReceivedEvent event) {
+        log(event.getAuthor(), event.getMessage().getContentRaw());
+    }
+
+    private void log(User author, String contentRaw) {
+        System.out.println(contentRaw + " from " + author.getName() + "(" + author.getIdLong() + ")");
+    }
+
     /**
      * Check if user is already in db etc
      *
-     *
-     * @return*/
+     * @return
+     */
     public UserWrapper doUserCheck(User author) {
         final UserWrapper userWrapper = userWrapperMap.computeIfAbsent(author.getId(), id -> new UserWrapper(author));
         dbService.handleUser(userWrapper);
@@ -43,10 +61,11 @@ public abstract class TapirListener extends ListenerAdapter {
 
     @Override
     public void onButtonClick(ButtonClickEvent event) {
-         doUserCheck(event.getUser());
-         String buttonId = doButtonStringValidityCheck(event);
+        logEvent(event);
+        doUserCheck(event.getUser());
+        String buttonId = doButtonStringValidityCheck(event);
 
-         //TODO Ab hbier mal refactorn
+        //TODO Ab hbier mal refactorn
         final String[] split = buttonId.split(QuizModule.MESSAGE_SEPERATOR + "");
         getUserWrapperMap().get(event.getUser().getId()).handleButton(event, split);
     }
@@ -56,7 +75,7 @@ public abstract class TapirListener extends ListenerAdapter {
      * or when its called by the system without a user calling, f.e. when posting pokemon.
      * In this case we put the pressing users number in front the be able to dispatch the request to the relating
      * module.
-     * */
+     */
     private String doButtonStringValidityCheck(ButtonClickEvent event) {
         return event.getButton().getId();
     }
@@ -73,7 +92,7 @@ public abstract class TapirListener extends ListenerAdapter {
     }
 
     public Set<Long> getUserNotAllowedToAsk() {
-         return userNotAllowedToAsk;
+        return userNotAllowedToAsk;
     }
 
     public JDA getBot() {

@@ -17,6 +17,7 @@ public class PMListener extends TapirListener {
 
     @Override
     public void onPrivateMessageReceived(@Nonnull PrivateMessageReceivedEvent event) {
+        logEvent(event);
         super.onPrivateMessageReceived(event);
         try {
             final UserWrapper userWrapper = doUserCheck(event.getAuthor());
@@ -26,4 +27,5 @@ public class PMListener extends TapirListener {
             e.printStackTrace();
         }
     }
+
 }

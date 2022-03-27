@@ -18,6 +18,7 @@ public class NoPMListener extends TapirListener {
 
     @Override
     public void onGuildMessageReceived(@Nonnull GuildMessageReceivedEvent event) {
+        logEvent(event);
         try {
             String messageRaw = event.getMessage().getContentDisplay();
             if (!messageRaw.startsWith("!")) {
