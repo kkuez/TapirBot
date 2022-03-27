@@ -529,6 +529,21 @@ public class PokeModule extends ReceiveModule {
                 case AWAITING_USER_TWO_SWAP_GRANT:
                     final boolean yes = messages[3].equals("Ja");
                     if (!yes) {
+                        MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
+                        fromBuilderToAccept.append(" hat abgelehnt, Tausch beendet :(");
+                        this.from.openPrivateChannel().queue((privateChannel) ->
+                                privateChannel.sendMessage(fromBuilderToAccept.build()).queue());
+
+                        final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                        MessageBuilder messageBuilder = new MessageBuilder("Arbeitet...");
+                        messageBuilder.setActionRows();
+                        buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+
+                        MessageBuilder toBuilderToAccept = new MessageBuilder(this.from.getName());
+                        toBuilderToAccept.append(" hat abgelehnt, Tausch beendet :(");
+                        this.to.openPrivateChannel().queue((privateChannel) ->
+                                privateChannel.sendMessage(toBuilderToAccept.build()).queue());
+
                         SWAP_PAIRS.remove(this);
                         return;
                     }
