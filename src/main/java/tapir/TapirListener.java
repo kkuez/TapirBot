@@ -10,6 +10,7 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import tapir.quiz.QuizModule;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,7 +45,8 @@ public abstract class TapirListener extends ListenerAdapter {
     }
 
     private void log(User author, String contentRaw) {
-        System.out.println(contentRaw + " from " + author.getName() + "(" + author.getIdLong() + ")");
+        System.out.println(LocalDateTime.now().withNano(0).toString() + " \"" + contentRaw + "\"" + " from "
+                + author.getName() + "(" + author.getIdLong() + ")");
     }
 
     /**
