@@ -718,7 +718,6 @@ public class PokeModule extends ReceiveModule {
                         removeMessagesFromChannelIfWithCode(privateChannel);
                     });
 
-                    removeMessagesFromChannelIfWithCode();
                     final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                     MessageBuilder messageBuilder = new MessageBuilder("Arbeitet...");
                     messageBuilder.setActionRows();
