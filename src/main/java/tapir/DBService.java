@@ -227,7 +227,7 @@ public class DBService {
         return userInfo;
     }
 
-    public void registerCaughtPokemon(User user, Pokemon pokemon) {
+    public void registerPokemon(User user, Pokemon pokemon) {
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate(
                     "insert into Pokemons(user, dexIndex, name, level) values (" + user.getIdLong() + ", "

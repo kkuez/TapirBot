@@ -16,14 +16,12 @@ import org.json.JSONObject;
 import tapir.DBService;
 import tapir.ReceiveModule;
 
-import javax.swing.text.html.Option;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -218,20 +216,19 @@ public class PokeModule extends ReceiveModule {
                     StringBuilder pokemonBuilder = new StringBuilder();
                     for (String pokemonCode : codesToDelete) {
                         getDbService().removePokemonFromUser(codeMap.get(pokemonCode), user);
-                        pokemonBuilder.append("\n").append(pokemonCode).append(" \t| ")
+                        pokemonBuilder.append("\nFreigelassen: ")
                                 .append(codeMap.get(pokemonCode).getName()).append(" Lvl. ")
                                 .append(codeMap.get(pokemonCode).getLevel());
                     }
-                    user.openPrivateChannel().queue((channel1) -> channel1.sendMessage("Pokemon freigelassen:"
-                            + pokemonBuilder.toString())
-                            .queue());
-                    removeMessagesFromPrivateChannelIfWithCode(event, user);
+                    user.openPrivateChannel().queue((privateChannel) ->
+                            privateChannel.sendMessage(pokemonBuilder).queue());
+                    removeMessagesFromChannelIfWithCode(event);
                 }
                 break;
         }
     }
 
-    private void removeMessagesFromPrivateChannelIfWithCode(Optional<Event> event, User user) {
+    private void removeMessagesFromChannelIfWithCode(Optional<Event> event) {
         ((PrivateMessageReceivedEvent) event.get()).getChannel().getIterableHistory()
                 .takeAsync(100)
                 .thenApply(list -> {
@@ -255,18 +252,17 @@ public class PokeModule extends ReceiveModule {
                 });
     }
 
-
     private void processSwap(User user, String[] messages, Optional<Event> event) {
         if (messages.length < 3) return;
 
         Optional<Swap> swapPairOpt = Optional.empty();
         try {
-            swapPairOpt = SWAP_PAIRS.stream().filter(sp -> sp.getUuid().equals(UUID.fromString(messages[2]))).findAny();
+            swapPairOpt = SWAP_PAIRS.stream().filter(sp -> sp.containsUsers(user)).findAny();
         } catch (Exception e) {
-            System.out.println();
+            e.printStackTrace();
         }
 
-        if (swapPairOpt.isEmpty()) {
+        if (swapPairOpt.isEmpty() && event.get() instanceof GuildMessageReceivedEvent) {
             final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
             final User fromUser = guildMessageReceivedEvent.getAuthor();
             final User toUser = event.get().getJDA().getUserById(getUserIdFromMention(messages[2]));
@@ -287,8 +283,8 @@ public class PokeModule extends ReceiveModule {
                     .append(toUser.getName()).append("...");
             fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
                     .queue());
-        } else {
-            swapPairOpt.get().process(messages, user);
+        } else if (swapPairOpt.isPresent()){
+            swapPairOpt.get().process(event, messages, user);
         }
     }
 
@@ -464,7 +460,7 @@ public class PokeModule extends ReceiveModule {
                 .build();
         buttonClickEvent.getMessage().editMessage(message).queue();
 
-        getDbService().registerCaughtPokemon(user, pokemon);
+        getDbService().registerPokemon(user, pokemon);
     }
 
     @Override
@@ -480,10 +476,12 @@ public class PokeModule extends ReceiveModule {
     private class Swap {
         private User from;
         private User to;
-        private List<Pokemon> fromUserSwapPokemons;
-        private List<Pokemon> toUserSwapPokemons;
+        private final List<Pokemon> fromUserSwapPokemons = new ArrayList<>();
+        private final List<Pokemon> toUserSwapPokemons = new ArrayList<>();
         private SwapStatus status = SwapStatus.AWAITING_USER_TWO_SWAP_GRANT;
         private UUID uuid = UUID.randomUUID();
+        private boolean fromAcceptedToSwap;
+        private boolean toAcceptedToSwap;
 
         public Swap(User from, User to) {
             this.from = from;
@@ -522,14 +520,11 @@ public class PokeModule extends ReceiveModule {
                     toUserContained = true;
                 }
 
-                if (fromUserContained && toUserContained) {
-                    return true;
-                }
             }
-            return false;
+            return fromUserContained || toUserContained;
         }
 
-        public void process(String[] messages, User user) {
+        public void process(Optional<Event> event, String[] messages, User user) {
             switch (status) {
                 case AWAITING_USER_TWO_SWAP_GRANT:
                     final boolean yes = messages[3].equals("Ja");
@@ -539,7 +534,7 @@ public class PokeModule extends ReceiveModule {
                     }
 
                     final Map<String, Pokemon> fromCodeMap = getCodeMap(getDbService().getPokemonOfUser(from));
-                    final MessageBuilder fromBuilder = new MessageBuilder("Welches Pokemon willst du " +
+                    MessageBuilder fromBuilder = new MessageBuilder("Welches Pokemon willst du " +
                             "tauschen?\n" + WRITE_ME_THE_CODE_WITH + " !p swap <CODE> (wenn du mehrere Pokemons tauschen " +
                             "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!");
 
@@ -561,9 +556,8 @@ public class PokeModule extends ReceiveModule {
                     final MessageBuilder toBuilder = new MessageBuilder("Welches Pokemon willst du " +
                             "tauschen?\n" + WRITE_ME_THE_CODE_WITH + " !p swap <CODE> (wenn du mehrere Pokemons freilassen " +
                             "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!\n" +
-                            ":octagonal_sign: Es empfiehlt sich, dass du mehrere Pokemon auf einmal freilässt. Wenn du " +
-                            "sie einzeln freilässt, dann mache zwischen jedem freilassen ein !p free um eine " +
-                            "aktualisierte CodeListe zu erhalten. :octagonal_sign: ");
+                            ":octagonal_sign: Wenn du mehrere Pokemon tauschen möchtest, solltest du die Möglichkeit" +
+                            " mit der Trennung durch ein Komma nutzen!:octagonal_sign: ");
 
                     List<String> toCodeMapKeys = toCodeMap.keySet().stream().collect(Collectors.toList());
                     Collections.sort(toCodeMapKeys);
@@ -579,14 +573,144 @@ public class PokeModule extends ReceiveModule {
                         index++;
                     }
                     status = SwapStatus.FIRST_USER_OFFER;
-                    break;
-                case FIRST_USER_OFFER:
-                    break;
-                case SECOND_USER_OFFER:
-                    break;
+                    return;
+                case FIRST_USER_OFFER: {
+                    try {
+                        UUID.fromString(messages[2]);
+                        return;
+                    } catch (Exception e) {
+                        //do nothing cuz planned
+                    }
+
+                    final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
+                    List<Pokemon> pokemonList;
+                    if (this.from.equals(user)) {
+                        pokemonList = this.fromUserSwapPokemons;
+                    } else if (this.to.equals(user)) {
+                        pokemonList = this.toUserSwapPokemons;
+                    } else {
+                        //TODO aufräumen bei solch einem Fall
+                        throw new RuntimeException("User konnte nicht in SwapPair gefunden werden!");
+                    }
+
+                    for (String code : messages[2].split(",")) {
+                        pokemonList.add(codeMap.get(code));
+                    }
+                    user.openPrivateChannel().queue((privateChannel) ->
+                            privateChannel.sendMessage("Warte auf anderen Spieler....").queue());
+                    status = SwapStatus.SECOND_USER_OFFER;
+                }
+                return;
+                case SECOND_USER_OFFER: {
+                    final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
+                    List<Pokemon> pokemonList;
+                    if (this.from.equals(user)) {
+                        pokemonList = this.fromUserSwapPokemons;
+                    } else if (this.to.equals(user)) {
+                        pokemonList = this.toUserSwapPokemons;
+                    } else {
+                        //TODO aufräumen bei solch einem Fall
+                        throw new RuntimeException("User konnte nicht in SwapPair gefunden werden!");
+                    }
+
+                    for (String code : messages[2].split(",")) {
+                        pokemonList.add(codeMap.get(code));
+                    }
+
+                    MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
+                    fromBuilderToAccept.append(" bietet dir folgende Pokemon an:");
+                    for (Pokemon toUserSwapPokemon : toUserSwapPokemons) {
+                        fromBuilderToAccept.append("\n").append(toUserSwapPokemon.getName()).append(" Lvl. ")
+                                .append(toUserSwapPokemon.getLevel());
+                    }
+                    fromBuilderToAccept.setActionRows(ActionRow.of(Button.primary("poke swap yes", "Annehmen"),
+                            Button.primary("poke swap no", "Ausschlagen")));
+                    this.from.openPrivateChannel().queue((privateChannel) ->
+                            privateChannel.sendMessage(fromBuilderToAccept.build()).queue());
+
+                    MessageBuilder toBuilderToAccept = new MessageBuilder(this.from.getName());
+                    toBuilderToAccept.append(" bietet dir folgende Pokemon an:");
+                    for (Pokemon toUserSwapPokemon : fromUserSwapPokemons) {
+                        toBuilderToAccept.append("\n").append(toUserSwapPokemon.getName()).append(" Lvl. ")
+                                .append(toUserSwapPokemon.getLevel());
+                    }
+                    toBuilderToAccept.setActionRows(ActionRow.of(Button.primary("poke swap yes", "Annehmen"),
+                            Button.primary("poke swap no", "Ausschlagen")));
+                    this.to.openPrivateChannel().queue((privateChannel) ->
+                            privateChannel.sendMessage(toBuilderToAccept.build()).queue());
+
+                    status = SwapStatus.WAITING_FOR_POKEMON_ACCEPT;
+                }
+                return;
+                case WAITING_FOR_POKEMON_ACCEPT: {
+                    if (user.equals(from) && messages[2].equals("yes")) {
+                        fromAcceptedToSwap = true;
+                    } else if (user.equals(to) && messages[2].equals("yes")) {
+                        toAcceptedToSwap = true;
+                    }
+
+                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                    MessageBuilder messageBuilder = new MessageBuilder("Warte auf Spieler...");
+                    messageBuilder.setActionRows();
+                    buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+                    status = SwapStatus.BOTH_ACCEPTED_POKEMON_SELECT;
+                }
+                    return;
                 case BOTH_ACCEPTED_POKEMON_SELECT:
-                    break;
-                case FIRST_USER_ACCEPTED_EXCHANGE:
+                    if(user.equals(from) && messages[2].equals("yes") && !fromAcceptedToSwap) {
+                        fromAcceptedToSwap = true;
+                    } else if (user.equals(to) && messages[2].equals("yes") && !toAcceptedToSwap) {
+                        toAcceptedToSwap = true;
+                    } else if (messages[2].equals("no")) {
+                        final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                        MessageBuilder messageBuilder = new MessageBuilder(user.getName());
+                        messageBuilder.append(" hat abgelehnt, Tausch beendet :(");
+                        messageBuilder.setActionRows();
+                        buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+
+
+                        if(!user.equals(from)) {
+                            MessageBuilder toBuilderToNo = new MessageBuilder(this.to.getName());
+                            toBuilderToNo.append(" hat abgelehnt, Tausch beendet :(");
+                            this.from.openPrivateChannel().queue((privateChannel) ->
+                                    privateChannel.sendMessage(toBuilderToNo.build()).queue());
+                        } else {
+                            MessageBuilder toBuilderToNo = new MessageBuilder(this.from.getName());
+                            toBuilderToNo.append(" hat abgelehnt, Tausch beendet :(");
+                            to.openPrivateChannel().queue((privateChannel) ->
+                                    privateChannel.sendMessage(toBuilderToNo.build()).queue());
+                        }
+                    } else {
+                        return;
+                    }
+
+                    for (Pokemon fromUserSwapPokemon : fromUserSwapPokemons) {
+                        getDbService().registerPokemon(to, fromUserSwapPokemon);
+                        getDbService().removePokemonFromUser(fromUserSwapPokemon, from);
+                    }
+
+                    for (Pokemon toUserSwapPokemon : toUserSwapPokemons) {
+                        getDbService().registerPokemon(from, toUserSwapPokemon);
+                        getDbService().removePokemonFromUser(toUserSwapPokemon, to);
+                    }
+
+                    MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
+                    fromBuilderToAccept.append(" hat angenommen, Tausch beendet :)");
+                    this.from.openPrivateChannel().queue((privateChannel) ->
+                            privateChannel.sendMessage(fromBuilderToAccept.build()).queue());
+
+                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                    MessageBuilder messageBuilder = new MessageBuilder("Arbeitet...");
+                    messageBuilder.setActionRows();
+                    buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+
+                    MessageBuilder toBuilderToAccept = new MessageBuilder(this.from.getName());
+                    toBuilderToAccept.append(" hat angenommen, Tausch beendet :)");
+                    this.to.openPrivateChannel().queue((privateChannel) ->
+                            privateChannel.sendMessage(toBuilderToAccept.build()).queue());
+
+
+                    SWAP_PAIRS.remove(this);
                     break;
             }
         }
@@ -594,6 +718,6 @@ public class PokeModule extends ReceiveModule {
 
     private enum SwapStatus {
         AWAITING_USER_TWO_SWAP_GRANT, FIRST_USER_OFFER, SECOND_USER_OFFER,
-        BOTH_ACCEPTED_POKEMON_SELECT, FIRST_USER_ACCEPTED_EXCHANGE;
+        BOTH_ACCEPTED_POKEMON_SELECT, FIRST_USER_ACCEPTED_EXCHANGE, WAITING_FOR_POKEMON_ACCEPT
     }
 }
