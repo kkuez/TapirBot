@@ -3,6 +3,7 @@ package tapir.pokemon;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Invite.Channel;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -222,14 +223,14 @@ public class PokeModule extends ReceiveModule {
                     }
                     user.openPrivateChannel().queue((privateChannel) ->
                             privateChannel.sendMessage(pokemonBuilder).queue());
-                    removeMessagesFromChannelIfWithCode(event);
+                    removeMessagesFromChannelIfWithCode(((PrivateMessageReceivedEvent) event.get()).getChannel());
                 }
                 break;
         }
     }
 
-    private void removeMessagesFromChannelIfWithCode(Optional<Event> event) {
-        ((PrivateMessageReceivedEvent) event.get()).getChannel().getIterableHistory()
+    private void removeMessagesFromChannelIfWithCode(PrivateChannel channel) {
+        channel.getIterableHistory()
                 .takeAsync(100)
                 .thenApply(list -> {
                     final List<Message> messagesToEdit = new ArrayList<>();
@@ -283,7 +284,7 @@ public class PokeModule extends ReceiveModule {
                     .append(toUser.getName()).append("...");
             fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
                     .queue());
-        } else if (swapPairOpt.isPresent()){
+        } else if (swapPairOpt.isPresent()) {
             swapPairOpt.get().process(event, messages, user);
         }
     }
@@ -670,9 +671,9 @@ public class PokeModule extends ReceiveModule {
                     buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
                     status = SwapStatus.BOTH_ACCEPTED_POKEMON_SELECT;
                 }
-                    return;
+                return;
                 case BOTH_ACCEPTED_POKEMON_SELECT:
-                    if(user.equals(from) && messages[2].equals("yes") && !fromAcceptedToSwap) {
+                    if (user.equals(from) && messages[2].equals("yes") && !fromAcceptedToSwap) {
                         fromAcceptedToSwap = true;
                     } else if (user.equals(to) && messages[2].equals("yes") && !toAcceptedToSwap) {
                         toAcceptedToSwap = true;
@@ -684,7 +685,7 @@ public class PokeModule extends ReceiveModule {
                         buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
 
 
-                        if(!user.equals(from)) {
+                        if (!user.equals(from)) {
                             MessageBuilder toBuilderToNo = new MessageBuilder(this.to.getName());
                             toBuilderToNo.append(" hat abgelehnt, Tausch beendet :(");
                             this.from.openPrivateChannel().queue((privateChannel) ->
@@ -712,17 +713,24 @@ public class PokeModule extends ReceiveModule {
                     MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
                     fromBuilderToAccept.append(" hat angenommen, Tausch beendet :)");
                     this.from.openPrivateChannel().queue((privateChannel) ->
-                            privateChannel.sendMessage(fromBuilderToAccept.build()).queue());
+                    {
+                        privateChannel.sendMessage(fromBuilderToAccept.build()).queue();
+                        removeMessagesFromChannelIfWithCode(privateChannel);
+                    });
 
+                    removeMessagesFromChannelIfWithCode();
                     final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                     MessageBuilder messageBuilder = new MessageBuilder("Arbeitet...");
                     messageBuilder.setActionRows();
                     buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
 
+
                     MessageBuilder toBuilderToAccept = new MessageBuilder(this.from.getName());
                     toBuilderToAccept.append(" hat angenommen, Tausch beendet :)");
-                    this.to.openPrivateChannel().queue((privateChannel) ->
-                            privateChannel.sendMessage(toBuilderToAccept.build()).queue());
+                    this.to.openPrivateChannel().queue((privateChannel) -> {
+                        privateChannel.sendMessage(toBuilderToAccept.build()).queue();
+                        removeMessagesFromChannelIfWithCode(privateChannel);
+                    });
 
 
                     SWAP_PAIRS.remove(this);
