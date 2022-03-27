@@ -23,6 +23,8 @@ import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class PokeModule extends ReceiveModule {
@@ -32,6 +34,8 @@ public class PokeModule extends ReceiveModule {
     private static JDA bot;
     private static final int MAXCOUNT = 3;
     private static final Set<Swap> SWAP_PAIRS = new HashSet<>(2);
+    private static final String WRITE_ME_THE_CODE_WITH = "Schreibe mir die Codes mit";
+    private static final Pattern CODE_PATTERN = Pattern.compile("[a-z][a-z] \\t\\| [A-Z][a-z]* Lvl\\..*");
 
     public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Integer pokemonMaxFreq,
                       Set<Long> userNotAllowedToAsk, JDA bot) {
@@ -66,7 +70,6 @@ public class PokeModule extends ReceiveModule {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-
             }
         };
         getExecutorService().submit(loopRunnable);
@@ -204,39 +207,7 @@ public class PokeModule extends ReceiveModule {
                 processPokedex(user, messages, event);
                 break;
             case "swap":
-                if (messages.length < 3) return;
-
-                Optional<Swap> swapPairOpt = Optional.empty();
-                try {
-                    swapPairOpt = SWAP_PAIRS.stream().filter(sp -> sp.getUuid().equals(UUID.fromString(messages[2]))).findAny();
-                } catch (Exception e) {
-                    System.out.println();
-                }
-
-                if (swapPairOpt.isEmpty()) {
-                    final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
-                    final User fromUser = guildMessageReceivedEvent.getAuthor();
-                    final User toUser = event.get().getJDA().getUserById(getUserIdFromMention(messages[2]));
-                    final RestAction<PrivateChannel> privateChannelRestAction =
-                            event.get().getJDA().openPrivateChannelById(toUser.getIdLong());
-
-                    final Swap swapPair = new Swap(fromUser, toUser);
-                    SWAP_PAIRS.add(swapPair);
-
-                    MessageBuilder toMessageBuilder = new MessageBuilder(fromUser.getName()).append(" fragt dich ob du " +
-                            "Pokemon tauschen möchtest?");
-                    final Message toBuild = toMessageBuilder.setActionRows(ActionRow.of(Button.primary("poke swap "
-                            + swapPair.getUuid() + " Ja", "Ja"), Button.primary("poke swap "
-                            + swapPair.getUuid() + " Nein", "Nein"))).build();
-                    toUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(toBuild).queue());
-
-                    MessageBuilder fromMessageBuilder = new MessageBuilder("Tauschen: Warte auf Bestätigung von ")
-                            .append(toUser.getName()).append("...");
-                    fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
-                            .queue());
-                } else {
-                    swapPairOpt.get().process(messages, user);
-                }
+                processSwap(user, messages, event);
                 break;
             case "free":
                 if (messages.length == 2) {
@@ -244,13 +215,80 @@ public class PokeModule extends ReceiveModule {
                 } else {
                     final String[] codesToDelete = messages[2].split(",");
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
+                    StringBuilder pokemonBuilder = new StringBuilder();
                     for (String pokemonCode : codesToDelete) {
                         getDbService().removePokemonFromUser(codeMap.get(pokemonCode), user);
+                        pokemonBuilder.append("\n").append(pokemonCode).append(" \t| ")
+                                .append(codeMap.get(pokemonCode).getName()).append(" Lvl. ")
+                                .append(codeMap.get(pokemonCode).getLevel());
                     }
-                    user.openPrivateChannel().queue((channel1) -> channel1.sendMessage("Pokemon freigelassen!")
+                    user.openPrivateChannel().queue((channel1) -> channel1.sendMessage("Pokemon freigelassen:"
+                            + pokemonBuilder.toString())
                             .queue());
+                    removeMessagesFromPrivateChannelIfWithCode(event, user);
                 }
                 break;
+        }
+    }
+
+    private void removeMessagesFromPrivateChannelIfWithCode(Optional<Event> event, User user) {
+        ((PrivateMessageReceivedEvent) event.get()).getChannel().getIterableHistory()
+                .takeAsync(100)
+                .thenApply(list -> {
+                    final List<Message> messagesToEdit = new ArrayList<>();
+                    listLoop:
+                    for (Message message : list) {
+                        lineLoop:
+                        for (String line : message.getContentRaw().split("\n")) {
+                            if (CODE_PATTERN.matcher(line).matches()) {
+                                messagesToEdit.add(message);
+                                break;
+                            }
+                        }
+                    }
+
+                    messagesToEdit.forEach(message -> {
+                        MessageBuilder messageBuilder = new MessageBuilder("CodeListe ist benutzt worden...");
+                        message.editMessage(messageBuilder.build()).queue();
+                    });
+                    return messagesToEdit;
+                });
+    }
+
+
+    private void processSwap(User user, String[] messages, Optional<Event> event) {
+        if (messages.length < 3) return;
+
+        Optional<Swap> swapPairOpt = Optional.empty();
+        try {
+            swapPairOpt = SWAP_PAIRS.stream().filter(sp -> sp.getUuid().equals(UUID.fromString(messages[2]))).findAny();
+        } catch (Exception e) {
+            System.out.println();
+        }
+
+        if (swapPairOpt.isEmpty()) {
+            final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
+            final User fromUser = guildMessageReceivedEvent.getAuthor();
+            final User toUser = event.get().getJDA().getUserById(getUserIdFromMention(messages[2]));
+            final RestAction<PrivateChannel> privateChannelRestAction =
+                    event.get().getJDA().openPrivateChannelById(toUser.getIdLong());
+
+            final Swap swapPair = new Swap(fromUser, toUser);
+            SWAP_PAIRS.add(swapPair);
+
+            MessageBuilder toMessageBuilder = new MessageBuilder(fromUser.getName()).append(" fragt dich ob du " +
+                    "Pokemon tauschen möchtest?");
+            final Message toBuild = toMessageBuilder.setActionRows(ActionRow.of(Button.primary("poke swap "
+                    + swapPair.getUuid() + " Ja", "Ja"), Button.primary("poke swap "
+                    + swapPair.getUuid() + " Nein", "Nein"))).build();
+            toUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(toBuild).queue());
+
+            MessageBuilder fromMessageBuilder = new MessageBuilder("Tauschen: Warte auf Bestätigung von ")
+                    .append(toUser.getName()).append("...");
+            fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
+                    .queue());
+        } else {
+            swapPairOpt.get().process(messages, user);
         }
     }
 
@@ -258,7 +296,7 @@ public class PokeModule extends ReceiveModule {
         final List<Pokemon> pokemonOfUser = getDbService().getPokemonOfUser(user);
 
         final MessageBuilder builder = new MessageBuilder("Welches Pokemon willst du " +
-                "freilassen?\nSchreibe mir die Codes mit !p free <CODE> (wenn du mehrere Pokemons freilassen " +
+                "freilassen?\n" + WRITE_ME_THE_CODE_WITH + " !p free <CODE> (wenn du mehrere Pokemons freilassen " +
                 "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!");
         builder.append("\n:octagonal_sign: __Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
                 " einzeln freilassen wollen, mache nach jedem Pokémon ein !p free um eine aktualisierte Codeliste" +
@@ -337,7 +375,6 @@ public class PokeModule extends ReceiveModule {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private String createPokedexPage(List<Pokemon> pokemonList, String username) throws IOException {
@@ -503,7 +540,7 @@ public class PokeModule extends ReceiveModule {
 
                     final Map<String, Pokemon> fromCodeMap = getCodeMap(getDbService().getPokemonOfUser(from));
                     final MessageBuilder fromBuilder = new MessageBuilder("Welches Pokemon willst du " +
-                            "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons tauschen " +
+                            "tauschen?\n" + WRITE_ME_THE_CODE_WITH + " !p swap <CODE> (wenn du mehrere Pokemons tauschen " +
                             "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!");
 
                     List<String> fromCodeMapKeys = fromCodeMap.keySet().stream().collect(Collectors.toList());
@@ -522,7 +559,7 @@ public class PokeModule extends ReceiveModule {
 
                     final Map<String, Pokemon> toCodeMap = getCodeMap(getDbService().getPokemonOfUser(to));
                     final MessageBuilder toBuilder = new MessageBuilder("Welches Pokemon willst du " +
-                            "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons freilassen " +
+                            "tauschen?\n" + WRITE_ME_THE_CODE_WITH + " !p swap <CODE> (wenn du mehrere Pokemons freilassen " +
                             "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!\n" +
                             ":octagonal_sign: Es empfiehlt sich, dass du mehrere Pokemon auf einmal freilässt. Wenn du " +
                             "sie einzeln freilässt, dann mache zwischen jedem freilassen ein !p free um eine " +
