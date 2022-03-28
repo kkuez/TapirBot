@@ -9,12 +9,14 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import tapir.pokemon.PokeModule;
 import tapir.quiz.QuizModule;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class UserWrapper {
     private static PokeModule pokeModule;
     private Map<Class, ReceiveModule> modules;
     private User user;
+    private LocalDateTime lastInteraction = LocalDateTime.now();
 
     public UserWrapper(User user) {
         if(modules == null) {
@@ -115,5 +117,13 @@ public class UserWrapper {
                     module.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel(), Optional.of(event));
                 }
         }
+    }
+
+    public LocalDateTime getLastInteraction() {
+        return lastInteraction;
+    }
+
+    public void setLastInteraction(LocalDateTime lastInteraction) {
+        this.lastInteraction = lastInteraction;
     }
 }

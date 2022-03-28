@@ -10,7 +10,11 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import tapir.quiz.QuizModule;
 
+import javax.xml.datatype.DatatypeFactory;
+import javax.xml.datatype.Duration;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.temporal.TemporalAmount;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -65,11 +69,19 @@ public abstract class TapirListener extends ListenerAdapter {
     public void onButtonClick(ButtonClickEvent event) {
         logEvent(event);
         doUserCheck(event.getUser());
-        String buttonId = doButtonStringValidityCheck(event);
+        final UserWrapper userWrapper = getUserWrapperMap().get(event.getUser().getId());
 
+        //To prevent button doubleklick
+        LocalDateTime lastInteraction = userWrapper.getLastInteraction();
+        final LocalDateTime now = LocalDateTime.now();
+        userWrapper.setLastInteraction(now);
+        final long diff = now.toEpochSecond(ZoneOffset.UTC) - lastInteraction.toEpochSecond(ZoneOffset.UTC);
+        if(diff > 1) return;
+
+        String buttonId = doButtonStringValidityCheck(event);
         //TODO Ab hbier mal refactorn
         final String[] split = buttonId.split(QuizModule.MESSAGE_SEPERATOR + "");
-        getUserWrapperMap().get(event.getUser().getId()).handleButton(event, split);
+        userWrapper.handleButton(event, split);
     }
 
     /**

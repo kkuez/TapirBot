@@ -23,7 +23,7 @@ public class NoPMListener extends TapirListener {
             if (!messageRaw.startsWith("!")) {
                 return;
             }
-            logEvent(event);;
+            logEvent(event);
             final UserWrapper userWrapper = doUserCheck(event.getAuthor());
             userWrapper.handle(event, getDbService(), getAllowedChannels(), getUserNotAllowedToAsk());
         } catch (Exception e) {

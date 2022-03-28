@@ -481,8 +481,8 @@ public class PokeModule extends ReceiveModule {
         private final List<Pokemon> toUserSwapPokemons = new ArrayList<>();
         private SwapStatus status = SwapStatus.AWAITING_USER_TWO_SWAP_GRANT;
         private UUID uuid = UUID.randomUUID();
-        private boolean fromAcceptedToSwap;
-        private boolean toAcceptedToSwap;
+        private boolean fromAcceptedToSwap = false;
+        private boolean toAcceptedToSwap = false;
 
         public Swap(User from, User to) {
             this.from = from;
@@ -673,6 +673,7 @@ public class PokeModule extends ReceiveModule {
                 }
                 return;
                 case BOTH_ACCEPTED_POKEMON_SELECT:
+                    status = SwapStatus.DECLINED;
                     if (user.equals(from) && messages[2].equals("yes") && !fromAcceptedToSwap) {
                         fromAcceptedToSwap = true;
                     } else if (user.equals(to) && messages[2].equals("yes") && !toAcceptedToSwap) {
@@ -730,8 +731,6 @@ public class PokeModule extends ReceiveModule {
                         privateChannel.sendMessage(toBuilderToAccept.build()).queue();
                         removeMessagesFromChannelIfWithCode(privateChannel);
                     });
-
-
                     SWAP_PAIRS.remove(this);
                     break;
             }
@@ -740,6 +739,6 @@ public class PokeModule extends ReceiveModule {
 
     private enum SwapStatus {
         AWAITING_USER_TWO_SWAP_GRANT, FIRST_USER_OFFER, SECOND_USER_OFFER,
-        BOTH_ACCEPTED_POKEMON_SELECT, FIRST_USER_ACCEPTED_EXCHANGE, WAITING_FOR_POKEMON_ACCEPT
+        BOTH_ACCEPTED_POKEMON_SELECT, FIRST_USER_ACCEPTED_EXCHANGE, DECLINED, WAITING_FOR_POKEMON_ACCEPT
     }
 }
