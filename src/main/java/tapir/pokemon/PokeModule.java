@@ -697,6 +697,7 @@ public class PokeModule extends ReceiveModule {
                             to.openPrivateChannel().queue((privateChannel) ->
                                     privateChannel.sendMessage(toBuilderToNo.build()).queue());
                         }
+                        return;
                     } else {
                         return;
                     }
