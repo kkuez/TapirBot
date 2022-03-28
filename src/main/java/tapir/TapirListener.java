@@ -75,7 +75,7 @@ public abstract class TapirListener extends ListenerAdapter {
         final LocalDateTime now = LocalDateTime.now();
         userWrapper.setLastInteraction(now);
         final long diff = now.toEpochSecond(ZoneOffset.UTC) - lastInteraction.toEpochSecond(ZoneOffset.UTC);
-        if(diff > 1) return;
+        if(diff <= 1) return;
 
         String buttonId = doButtonStringValidityCheck(event);
         //TODO Ab hbier mal refactorn
