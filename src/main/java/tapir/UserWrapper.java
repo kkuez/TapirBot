@@ -16,7 +16,7 @@ public class UserWrapper {
     private static PokeModule pokeModule;
     private Map<Class, ReceiveModule> modules;
     private User user;
-    private LocalDateTime lastInteraction = LocalDateTime.now();
+    private LocalDateTime lastInteraction = LocalDateTime.now().minusMinutes(1);
 
     public UserWrapper(User user) {
         if(modules == null) {

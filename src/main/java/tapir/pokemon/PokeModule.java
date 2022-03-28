@@ -45,12 +45,18 @@ public class PokeModule extends ReceiveModule {
     }
 
     private void startCatchLoop() {
-        final Runnable loopRunnable = () -> {
+
+        final Runnable runnable = () -> {
             long oneHourAsMilliSecs = 3600000;
+            boolean isDebug = false;
+            if(pokemonMaxFreq < 100) {
+                isDebug = true;
+            }
             while (true) {
                 //long timeToWait = 10000;
-                long timeToWait = 0;
-                while (pokemonMaxFreq > 300 && timeToWait < 300000) {
+                long timeToWait = pokemonMaxFreq * 1000;
+
+                while (!isDebug && timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * pokemonMaxFreq * 1000);
                 }
@@ -70,7 +76,7 @@ public class PokeModule extends ReceiveModule {
                     e.printStackTrace();
                 }
             }
-        };
+        }; final Runnable loopRunnable = runnable;
         getExecutorService().submit(loopRunnable);
     }
 
