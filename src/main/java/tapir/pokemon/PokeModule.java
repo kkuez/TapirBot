@@ -3,7 +3,6 @@ package tapir.pokemon;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
-import net.dv8tion.jda.api.entities.Invite.Channel;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -34,6 +33,7 @@ public class PokeModule extends ReceiveModule {
     private static final int MAXCOUNT = 3;
     private static final Set<Swap> SWAP_PAIRS = new HashSet<>(2);
     private static final String WRITE_ME_THE_CODE_WITH = "Schreibe mir die Codes mit";
+    private static final String SWAP_DECLINED_STRING = " hat abgelehnt, Tausch beendet :(";
     private static final Pattern CODE_PATTERN = Pattern.compile("[a-z][a-z] \\t\\| [A-Z][a-z]* Lvl\\..*");
 
     public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Integer pokemonMaxFreq,
@@ -291,7 +291,7 @@ public class PokeModule extends ReceiveModule {
             fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
                     .queue());
         } else if (swapPairOpt.isPresent()) {
-            swapPairOpt.get().process(event, messages, user);
+            swapPairOpt.get().processSwapFurther(event, messages, user);
         }
     }
 
@@ -531,13 +531,13 @@ public class PokeModule extends ReceiveModule {
             return fromUserContained || toUserContained;
         }
 
-        public void process(Optional<Event> event, String[] messages, User user) {
+        public void processSwapFurther(Optional<Event> event, String[] messages, User user) {
             switch (status) {
                 case AWAITING_USER_TWO_SWAP_GRANT:
                     final boolean yes = messages[3].equals("Ja");
                     if (!yes) {
                         MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
-                        fromBuilderToAccept.append(" hat abgelehnt, Tausch beendet :(");
+                        fromBuilderToAccept.append(SWAP_DECLINED_STRING);
                         this.from.openPrivateChannel().queue((privateChannel) ->
                                 privateChannel.sendMessage(fromBuilderToAccept.build()).queue());
 
@@ -547,7 +547,7 @@ public class PokeModule extends ReceiveModule {
                         buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
 
                         MessageBuilder toBuilderToAccept = new MessageBuilder(this.from.getName());
-                        toBuilderToAccept.append(" hat abgelehnt, Tausch beendet :(");
+                        toBuilderToAccept.append(SWAP_DECLINED_STRING);
                         this.to.openPrivateChannel().queue((privateChannel) ->
                                 privateChannel.sendMessage(toBuilderToAccept.build()).queue());
 
@@ -687,19 +687,19 @@ public class PokeModule extends ReceiveModule {
                     } else if (messages[2].equals("no")) {
                         final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                         MessageBuilder messageBuilder = new MessageBuilder(user.getName());
-                        messageBuilder.append(" hat abgelehnt, Tausch beendet :(");
+                        messageBuilder.append(SWAP_DECLINED_STRING);
                         messageBuilder.setActionRows();
                         buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
 
 
                         if (!user.equals(from)) {
                             MessageBuilder toBuilderToNo = new MessageBuilder(this.to.getName());
-                            toBuilderToNo.append(" hat abgelehnt, Tausch beendet :(");
+                            toBuilderToNo.append(SWAP_DECLINED_STRING);
                             this.from.openPrivateChannel().queue((privateChannel) ->
                                     privateChannel.sendMessage(toBuilderToNo.build()).queue());
                         } else {
                             MessageBuilder toBuilderToNo = new MessageBuilder(this.from.getName());
-                            toBuilderToNo.append(" hat abgelehnt, Tausch beendet :(");
+                            toBuilderToNo.append(SWAP_DECLINED_STRING);
                             to.openPrivateChannel().queue((privateChannel) ->
                                     privateChannel.sendMessage(toBuilderToNo.build()).queue());
                         }
