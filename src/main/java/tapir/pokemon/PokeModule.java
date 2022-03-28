@@ -445,7 +445,7 @@ public class PokeModule extends ReceiveModule {
 
             if (Math.random() > 0.5D) {
                 int countToSteal = 5;
-                builder.append("\n\n...Und was ist das?! \n*Team Rocket* ist erschienen und hat dir **")
+                builder.append("\n\n*...Und was ist das?!* \n**Team Rocket** ist erschienen und hat dir **")
                         .append(countToSteal).append("** zufällige Pokemon stibitzt D:");
                 Collections.shuffle(pokemonOfUser);
                 pokemonOfUser.subList(0, countToSteal).forEach(pokemonToRemove -> {
