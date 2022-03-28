@@ -70,7 +70,6 @@ public abstract class TapirListener extends ListenerAdapter {
         logEvent(event);
         doUserCheck(event.getUser());
         final UserWrapper userWrapper = getUserWrapperMap().get(event.getUser().getId());
-
         //To prevent button doubleklick
         LocalDateTime lastInteraction = userWrapper.getLastInteraction();
         final LocalDateTime now = LocalDateTime.now();
