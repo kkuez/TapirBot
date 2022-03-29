@@ -54,7 +54,7 @@ public class PokeModule extends ReceiveModule {
             }
             while (true) {
                 //long timeToWait = 10000;
-                long timeToWait = pokemonMaxFreq * 1000;
+                long timeToWait =  1000;
 
                 while (!isDebug && timeToWait < 300000) {
                     final double random = Math.random();
