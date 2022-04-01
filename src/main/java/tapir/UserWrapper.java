@@ -114,7 +114,9 @@ public class UserWrapper {
                 break;
             default:
                 for (ReceiveModule module : modules.values()) {
-                    module.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel(), Optional.of(event));
+                    if (module.waitingForAnswer()) {
+                        module.handlePM(user, fullWithoutAusrufezeichen, bot, event.getChannel(), Optional.of(event));
+                    }
                 }
         }
     }

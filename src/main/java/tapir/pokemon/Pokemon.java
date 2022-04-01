@@ -3,12 +3,14 @@ package tapir.pokemon;
 import org.jetbrains.annotations.NotNull;
 
 public class Pokemon implements Comparable<Pokemon>{
+    private int rowid;
     private int pokedexIndex;
     private String name;
     private int level;
     private String pictureUrlString;
 
-    public Pokemon(int pokedexIndex, String name, int level) {
+    public Pokemon(Integer rowid, int pokedexIndex, String name, int level) {
+        this.rowid = rowid;
         this.pokedexIndex = pokedexIndex;
         this.name = name;
         this.level = level;
@@ -30,6 +32,10 @@ public class Pokemon implements Comparable<Pokemon>{
 
     public String getPictureUrlString() {
         return pictureUrlString;
+    }
+
+    public int getRowid() {
+        return rowid;
     }
 
     @Override

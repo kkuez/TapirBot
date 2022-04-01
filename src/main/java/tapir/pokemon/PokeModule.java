@@ -169,7 +169,7 @@ public class PokeModule extends ReceiveModule {
         final double levelDouble = Math.random() * 100;
         final long level = Math.round(levelDouble);
 
-        return new Pokemon((int) index, name, (int) level);
+        return new Pokemon(null, (int) index, name, (int) level);
     }
 
     private static String readAll(Reader rd) throws IOException {
@@ -222,7 +222,7 @@ public class PokeModule extends ReceiveModule {
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
                     StringBuilder pokemonBuilder = new StringBuilder();
                     for (String pokemonCode : codesToDelete) {
-                        getDbService().removePokemonFromUser(codeMap.get(pokemonCode), user);
+                        getDbService().removePokemonFromUser(codeMap.get(pokemonCode));
                         pokemonBuilder.append("\nFreigelassen: ")
                                 .append(codeMap.get(pokemonCode).getName()).append(" Lvl. ")
                                 .append(codeMap.get(pokemonCode).getLevel());
@@ -449,7 +449,7 @@ public class PokeModule extends ReceiveModule {
                         .append(countToSteal).append("** zufällige Pokemon stibitzt D:");
                 Collections.shuffle(pokemonOfUser);
                 pokemonOfUser.subList(0, countToSteal).forEach(pokemonToRemove -> {
-                    getDbService().removePokemonFromUser(pokemonToRemove, interactedUser);
+                    getDbService().removePokemonFromUser(pokemonToRemove);
                     builder.append("\n**").append(pokemonToRemove.getName())
                             .append("**, Level:*").append(pokemonToRemove.getLevel()).append("*");
                 });
@@ -459,6 +459,7 @@ public class PokeModule extends ReceiveModule {
             return;
         }
 
+        getDbService().registerPokemon(user, pokemon);
         final Message message = new MessageBuilder()
                 .append(buttonClickEvent.getMessage().getContentRaw())
                 .append("\n*")
@@ -467,7 +468,6 @@ public class PokeModule extends ReceiveModule {
                 .build();
         buttonClickEvent.getMessage().editMessage(message).queue();
 
-        getDbService().registerPokemon(user, pokemon);
     }
 
     @Override
@@ -710,12 +710,12 @@ public class PokeModule extends ReceiveModule {
 
                     for (Pokemon fromUserSwapPokemon : fromUserSwapPokemons) {
                         getDbService().registerPokemon(to, fromUserSwapPokemon);
-                        getDbService().removePokemonFromUser(fromUserSwapPokemon, from);
+                        getDbService().removePokemonFromUser(fromUserSwapPokemon);
                     }
 
                     for (Pokemon toUserSwapPokemon : toUserSwapPokemons) {
                         getDbService().registerPokemon(from, toUserSwapPokemon);
-                        getDbService().removePokemonFromUser(toUserSwapPokemon, to);
+                        getDbService().removePokemonFromUser(toUserSwapPokemon);
                     }
 
                     MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());

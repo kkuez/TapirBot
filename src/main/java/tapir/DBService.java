@@ -245,9 +245,10 @@ public class DBService {
         List<Pokemon> pokemonList = new ArrayList<>();
 
         try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("select * from Pokemons where user=" + id)) {
+             ResultSet rs = statement.executeQuery("select rowid, * from Pokemons where user=" + id)) {
             while (rs.next()) {
-                Pokemon pokemon = new Pokemon(rs.getInt("dexIndex"), rs.getString("name"), rs.getInt("level"));
+                Pokemon pokemon = new Pokemon(rs.getInt("rowid"), rs.getInt("dexIndex"), rs.getString("name"),
+                        rs.getInt("level"));
                 pokemonList.add(pokemon);
             }
         } catch (SQLException e) {
@@ -258,10 +259,8 @@ public class DBService {
         return pokemonList;
     }
 
-    public void removePokemonFromUser(Pokemon pokemonToRemove, User interactedUser) {
-        final String sql = "delete from Pokemons where name like '%" + pokemonToRemove.getName() + "%' " +
-                "and level=" + pokemonToRemove.getLevel() +
-                " and user =" + interactedUser.getIdLong();
+    public void removePokemonFromUser(Pokemon pokemonToRemove) {
+        final String sql = "delete from Pokemons where rowid=" + pokemonToRemove.getRowid();
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate(sql);
         } catch (SQLException e) {
