@@ -98,7 +98,8 @@ public class UserWrapper {
                     event.getMessage().reply("Das scheint nicht Prod zu sein, kein Version möglich :o").queue();
                 } else {
                     try {
-                        final FileTime lastModifiedTimeUniversalTime = Files.getLastModifiedTime(Path.of(tapirJar.get()));
+                        final FileTime lastModifiedTimeUniversalTime =
+                                Files.getLastModifiedTime(Path.of(tapirJar.get()));
                         final String rightTime =
                                 lastModifiedTimeUniversalTime.toInstant().atZone(ZoneId.systemDefault()).toString();
                         event.getChannel().sendMessage(rightTime).queue();
