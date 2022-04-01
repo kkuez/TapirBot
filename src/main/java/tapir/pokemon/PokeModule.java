@@ -298,7 +298,7 @@ public class PokeModule extends ReceiveModule {
     private void postGeneralFreeMessage(User user) {
         final List<Pokemon> pokemonOfUser = getDbService().getPokemonOfUser(user);
 
-        final MessageBuilder builder = new MessageBuilder("Welches Pokemon willst du " +
+        StringBuilder builder = new StringBuilder("Welches Pokemon willst du " +
                 "freilassen?\n" + WRITE_ME_THE_CODE_WITH + " !p free <CODE> (wenn du mehrere Pokemons freilassen " +
                 "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!");
         builder.append("\n:octagonal_sign: __Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
@@ -313,9 +313,10 @@ public class PokeModule extends ReceiveModule {
         for (String codeMapKey : codeMapKeys) {
             final Pokemon pokemon = codeMap.get(codeMapKey);
             builder.append("\n" + codeMapKey + " \t| " + pokemon.getName() + " Lvl. " + pokemon.getLevel());
-            if (index != 0 && (index % 50 == 0 || codeMapKeys.size() == index + 1) && !builder.isEmpty()) {
-                user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(builder.build()).queue());
-                builder.setContent("");
+            if (index != 0 && (index % 50 == 0 || codeMapKeys.size() == index + 1) && builder.length() != 0) {
+                String outputString = builder.toString();
+                user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(outputString).queue());
+                builder = new StringBuilder();
             }
             index++;
         }
