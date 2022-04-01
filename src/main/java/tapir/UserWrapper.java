@@ -9,17 +9,23 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import tapir.pokemon.PokeModule;
 import tapir.quiz.QuizModule;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.time.LocalDateTime;
 import java.util.*;
 
 public class UserWrapper {
     private static PokeModule pokeModule;
+    private static final String PROGRAM_NAME = "TapirBot.jar";
     private Map<Class, ReceiveModule> modules;
     private User user;
     private LocalDateTime lastInteraction = LocalDateTime.now().minusMinutes(1);
 
     public UserWrapper(User user) {
-        if(modules == null) {
+        if (modules == null) {
             modules = new HashMap<>();
         }
         this.user = user;
@@ -42,7 +48,7 @@ public class UserWrapper {
 
         switch (split[0].toLowerCase()) {
             case "quiz":
-                if(!split[2].equals(event.getInteraction().getMember().getId())) {
+                if (!split[2].equals(event.getInteraction().getMember().getId())) {
                     final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
                     event.getChannel().sendMessage("Sorry " + userNamePressedButton + ", das ist" +
                             " nicht dein Button!!! :o").queue();
@@ -81,6 +87,22 @@ public class UserWrapper {
                 //TODO Refactorn (s. oben)?
                 pokeModule.handle(user, event.getMessage().getContentRaw().split(" "),
                         event.getChannel(), Optional.of(event));
+                break;
+            case "v":
+            case "version":
+                final String[] filesInProgramPath = new File(".").getAbsoluteFile().getParentFile().list();
+                final Optional<String> tapirJar = Arrays.stream(filesInProgramPath)
+                        .filter(fileName -> fileName.contains(PROGRAM_NAME)).findAny();
+                if (tapirJar.isEmpty()) {
+                    event.getMessage().reply("Das scheint nicht Prod zu sein, kein Version möglich :o").queue();
+                } else {
+                    try {
+                        final FileTime lastModifiedTime = Files.getLastModifiedTime(Path.of(tapirJar.get()));
+                        event.getChannel().sendMessage(lastModifiedTime.toString()).queue();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
                 break;
             default:
                 for (ReceiveModule module : modules.values()) {
