@@ -316,7 +316,7 @@ public class PokeModule extends ReceiveModule {
             if (index != 0 && (index % 50 == 0 || codeMapKeys.size() == index + 1) && builder.length() != 0) {
                 String outputString = builder.toString();
                 user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(outputString).queue());
-                builder = new StringBuilder();
+                builder = new StringBuilder("\n");
             }
             index++;
         }
