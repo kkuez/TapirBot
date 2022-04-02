@@ -221,14 +221,15 @@ public class PokeModule extends ReceiveModule {
                 if (messages.length == 2) {
                     postGeneralFreeMessage(user);
                 } else {
-                    final String[] codesToDelete = messages[2].split(",");
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
+                    final List<Pokemon> pokemonToDelete = Arrays.stream(messages[2].split(","))
+                            .map(code -> codeMap.get(code)).collect(Collectors.toList());
                     StringBuilder pokemonBuilder = new StringBuilder();
-                    for (String pokemonCode : codesToDelete) {
-                        getDbService().removePokemonFromUser(codeMap.get(pokemonCode));
+                    getDbService().removePokemonFromUser(pokemonToDelete);
+
+                    for (Pokemon pokemon : pokemonToDelete) {
                         pokemonBuilder.append("\nFreigelassen: ")
-                                .append(codeMap.get(pokemonCode).getName()).append(" Lvl. ")
-                                .append(codeMap.get(pokemonCode).getLevel());
+                                .append(pokemon.getName()).append(" Lvl. ").append(pokemon.getLevel());
                     }
                     user.openPrivateChannel().queue((privateChannel) ->
                             privateChannel.sendMessage(pokemonBuilder).queue());
@@ -452,8 +453,9 @@ public class PokeModule extends ReceiveModule {
                 builder.append("\n\n*...Und was ist das?!* \n**Team Rocket** ist erschienen und hat dir **")
                         .append(countToSteal).append("** zufällige Pokemon stibitzt D:");
                 Collections.shuffle(pokemonOfUser);
-                pokemonOfUser.subList(0, countToSteal).forEach(pokemonToRemove -> {
-                    getDbService().removePokemonFromUser(pokemonToRemove);
+                final List<Pokemon> pokemonsToRemove = pokemonOfUser.subList(0, countToSteal);
+                getDbService().removePokemonFromUser(pokemonsToRemove);
+                pokemonsToRemove.forEach(pokemonToRemove -> {
                     builder.append("\n**").append(pokemonToRemove.getName())
                             .append("**, Level:*").append(pokemonToRemove.getLevel()).append("*");
                 });
@@ -714,13 +716,13 @@ public class PokeModule extends ReceiveModule {
 
                     for (Pokemon fromUserSwapPokemon : fromUserSwapPokemons) {
                         getDbService().registerPokemon(to, fromUserSwapPokemon);
-                        getDbService().removePokemonFromUser(fromUserSwapPokemon);
                     }
+                    getDbService().removePokemonFromUser(fromUserSwapPokemons);
 
                     for (Pokemon toUserSwapPokemon : toUserSwapPokemons) {
                         getDbService().registerPokemon(from, toUserSwapPokemon);
-                        getDbService().removePokemonFromUser(toUserSwapPokemon);
                     }
+                    getDbService().removePokemonFromUser(toUserSwapPokemons);
 
                     MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
                     fromBuilderToAccept.append(" hat angenommen, Tausch beendet :)");

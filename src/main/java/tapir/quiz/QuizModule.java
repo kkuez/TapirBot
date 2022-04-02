@@ -78,12 +78,9 @@ public class QuizModule extends ReceiveModule {
                     final String answerText = answerNr == 4 ? "Keine Ahnung!" :answers.get(answerNr).getText();
 
                     final Message message = new MessageBuilder()
-                            .append(questionAfterTrim)
-                            .append("\n*")
-                            .append(user.getName())
+                            .append(questionAfterTrim).append("\n*").append(user.getName())
                             .append("* hat geantwortet mit \"*")
-                            .append(answerText)
-                            .append("*\"!\n")
+                            .append(answerText).append("*\"!\n")
                             .append("Das Tapir-Orakel meint: *\"").append(getRandomWhoKnowsString()).append("\"*")
                             .build();
                     buttonClickEvent.editMessage(message).queue();
@@ -116,7 +113,7 @@ public class QuizModule extends ReceiveModule {
                 "...so wahr ich Knut heiße!",
                 "Klingt doch ganz gut die Antwort!?",
                 "Naja... ich weiß ja nicht!",
-                "Früher hätte man sich für die Antwort verkrochen und schämen müssen!",
+                "Früher hätte man sich für die Antwort verkriechen und schämen müssen!",
                 "Igitt!!!",
                 "Ob das wohl so klug war?",
                 "Da war wohl Verzweiflung am Werk!"

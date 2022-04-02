@@ -259,12 +259,21 @@ public class DBService {
         return pokemonList;
     }
 
-    public void removePokemonFromUser(Pokemon pokemonToRemove) {
-        final String sql = "delete from Pokemons where rowid=" + pokemonToRemove.getRowid();
-        try (Statement statement = getConnection().createStatement();) {
-            statement.executeUpdate(sql);
+    public void removePokemonFromUser(List<Pokemon> pokemonToRemove) {
+        try(final PreparedStatement preparedStatement =
+                    getConnection().prepareStatement("delete from Pokemons where rowid=?")) {
+            for (Pokemon pokemon : pokemonToRemove) {
+                preparedStatement.setInt(1, pokemon.getRowid());
+                preparedStatement.addBatch();
+            }
+            preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            throw new TapirException("Could not delete pokemon\n" + sql, e);
+            e.printStackTrace();
+            throw new RuntimeException("Couldnt Remove Pokemon", e);
         }
+    }
+
+    public void removePokemonFromUser(Pokemon pokemonToRemove) {
+        removePokemonFromUser(List.of(pokemonToRemove));
     }
 }
