@@ -83,7 +83,8 @@ public class QuizModule extends ReceiveModule {
                             .append(user.getName())
                             .append("* hat geantwortet mit \"*")
                             .append(answerText)
-                            .append("*\"!")
+                            .append("*\"!\n")
+                            .append("Das Tapir-Orakel meint: *\"").append(getRandomWhoKnowsString()).append("\"*")
                             .build();
                     buttonClickEvent.editMessage(message).queue();
                 } else {
@@ -99,6 +100,30 @@ public class QuizModule extends ReceiveModule {
             }
         }
         System.out.println();
+    }
+
+    private String getRandomWhoKnowsString() {
+        final List<String> of = List.of(
+                "Ob das wohl stimmt...?",
+                "Ob das wirklich richtig ist, seht ihr wenn...ihr sie/ihn fragt!! (...oder so)",
+                "Kann ja auch sein?",
+                "Schien mir aber ganz schön unentschlossen beim Tippen...",
+                "DAS HAT WOHL DER TEUFEL VERRATEN!!",
+                "Hm... wirklich?",
+                "Ach, jetzt ernsthaft oder was?",
+                "Wer weiß, ob das stimmt.",
+                "...thihihi... eh bestimmt alles gelogen O:)",
+                "...so wahr ich Knut heiße!",
+                "Klingt doch ganz gut die Antwort!?",
+                "Naja... ich weiß ja nicht!",
+                "Früher hätte man sich für die Antwort verkrochen und schämen müssen!",
+                "Igitt!!!",
+                "Ob das wohl so klug war?",
+                "Da war wohl Verzweiflung am Werk!"
+        );
+        final ArrayList<String> strings = new ArrayList<>(of);
+        Collections.shuffle(strings);
+        return strings.get(0);
     }
 
     private void newQuestion(User user) {
