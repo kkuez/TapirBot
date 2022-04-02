@@ -228,12 +228,23 @@ public class DBService {
     }
 
     public void registerPokemon(User user, Pokemon pokemon) {
-        try (Statement statement = getConnection().createStatement();) {
-            statement.executeUpdate(
-                    "insert into Pokemons(user, dexIndex, name, level) values (" + user.getIdLong() + ", "
-                            + pokemon.getPokedexIndex() + ", '" + pokemon.getName() + "', " + pokemon.getLevel() + ")");
-        } catch (SQLException e) {
-            throw new TapirException("Could not handle Users!", e);
+        registerPokemon(user, List.of(pokemon));
+    }
+
+    public void registerPokemon(User user, List<Pokemon> pokemonList) {
+        try (final PreparedStatement preparedStatement =getConnection()
+                             .prepareStatement("insert into Pokemons(user, dexIndex, name, level) values (?,?,'?',?)")) {
+            for (Pokemon pokemon : pokemonList) {
+                preparedStatement.setLong(1, user.getIdLong());
+                preparedStatement.setInt(2, pokemon.getPokedexIndex());
+                preparedStatement.setString(3, pokemon.getName());
+                preparedStatement.setInt(4, pokemon.getLevel());
+                preparedStatement.addBatch();
+            }
+
+            preparedStatement.executeUpdate();
+        } catch (SQLException throwables) {
+            throwables.printStackTrace();
         }
     }
 
@@ -271,9 +282,5 @@ public class DBService {
             e.printStackTrace();
             throw new RuntimeException("Couldnt Remove Pokemon", e);
         }
-    }
-
-    public void removePokemonFromUser(Pokemon pokemonToRemove) {
-        removePokemonFromUser(List.of(pokemonToRemove));
     }
 }

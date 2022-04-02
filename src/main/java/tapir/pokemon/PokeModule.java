@@ -714,14 +714,10 @@ public class PokeModule extends ReceiveModule {
                         return;
                     }
 
-                    for (Pokemon fromUserSwapPokemon : fromUserSwapPokemons) {
-                        getDbService().registerPokemon(to, fromUserSwapPokemon);
-                    }
+                    getDbService().registerPokemon(to, fromUserSwapPokemons);
                     getDbService().removePokemonFromUser(fromUserSwapPokemons);
 
-                    for (Pokemon toUserSwapPokemon : toUserSwapPokemons) {
-                        getDbService().registerPokemon(from, toUserSwapPokemon);
-                    }
+                    getDbService().registerPokemon(from, toUserSwapPokemons);
                     getDbService().removePokemonFromUser(toUserSwapPokemons);
 
                     MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
