@@ -139,16 +139,18 @@ public class DBService {
         return rankingTable;
     }
 
-    public void enterQuestions(User user, QuizQuestion question, List<QuizAnswer> answers) {
-        try (Statement statement = getConnection().createStatement();) {
-            statement.executeUpdate(
-                    "insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1," +
-                            "Wrong_Answer_2, Wrong_Answer_3, user) values('" + mangleChars(question.getText()) + "','"
-                            + mangleChars(answers.get(0).getText()) + "','" +
-                            mangleChars(answers.get(1).getText()) + "','" +
-                            mangleChars(answers.get(2).getText()) + "','" +
-                            mangleChars(answers.get(3).getText()) + "'," +
-                            user.getIdLong() + ")");
+    public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers) {
+        try (PreparedStatement statement =
+                     getConnection().prepareStatement("insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1, " +
+                             "Wrong_Answer_2, Wrong_Answer_3, user) values(?,?,?,?,?,?)")) {
+            statement.setString(1, mangleChars(question.getText()));
+            statement.setString(2, mangleChars(answers.get(0).getText()));
+            statement.setString(3, mangleChars(answers.get(1).getText()));
+            statement.setString(4, mangleChars(answers.get(2).getText()));
+            statement.setString(5, mangleChars(answers.get(3).getText()));
+            statement.setLong(6, user.getIdLong());
+            statement.addBatch();
+            statement.executeUpdate();
         } catch (SQLException e) {
             throw new TapirException("Could not enter question for user " + user.getIdLong(), e);
         }
