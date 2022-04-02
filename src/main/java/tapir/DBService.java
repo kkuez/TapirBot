@@ -1,5 +1,6 @@
 package tapir;
 
+import entities.QuizQuestions;
 import net.dv8tion.jda.api.entities.User;
 import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import tapir.exception.TapirException;
@@ -16,22 +17,11 @@ import javax.persistence.*;
 public class DBService {
 
     private final String dbPath;
-    private final EntityManager em;
+    EntityManagerFactory emf = Persistence.createEntityManagerFactory("emf-sqlite");
     private Set<Long> knownUsers;
     private SQLiteConnectionPoolDataSource poolDataSource;
 
     public DBService(Properties properties) {
-
-        EntityManagerFactory emf = Persistence.createEntityManagerFactory("emf-sqlite");
-        em = emf.createEntityManager();
-        em.getTransaction().begin();
-        entities.User user = new entities.User();
-        user.setId(111L);
-        user.setName("testUserJPA");
-        em.persist(user);
-        em.getTransaction().commit();
-
-
         dbPath = new File(properties.get("dbPath").toString().replace("\"", "")).getAbsolutePath();
         readUsers();
         try {
@@ -152,7 +142,19 @@ public class DBService {
     }
 
     public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers) {
-        try (PreparedStatement statement =
+        final EntityManager em = emf.createEntityManager();
+        em.getTransaction().begin();
+        final QuizQuestions quizQuestionEntity = new QuizQuestions();
+        quizQuestionEntity.setText(question.getText());
+        quizQuestionEntity.setRight_Answer(answers.get(0).getText());
+        quizQuestionEntity.setWrong_Answer1(answers.get(1).getText());
+        quizQuestionEntity.setWrong_Answer2(answers.get(2).getText());
+        quizQuestionEntity.setWrong_Answer3(answers.get(3).getText());
+        quizQuestionEntity.setUser(user.getIdLong());
+        em.persist(quizQuestionEntity);
+        em.getTransaction().commit();
+
+        /*try (PreparedStatement statement =
                      getConnection().prepareStatement("insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1, " +
                              "Wrong_Answer_2, Wrong_Answer_3, user) values(?,?,?,?,?,?)")) {
             statement.setString(1, mangleChars(question.getText()));
@@ -165,7 +167,7 @@ public class DBService {
             statement.executeUpdate();
         } catch (SQLException e) {
             throw new TapirException("Could not enter question for user " + user.getIdLong(), e);
-        }
+        }*/
     }
 
     private String mangleChars(String input) {
@@ -246,8 +248,8 @@ public class DBService {
     }
 
     public void registerPokemon(User user, List<Pokemon> pokemonList) {
-        try (final PreparedStatement preparedStatement =getConnection()
-                             .prepareStatement("insert into Pokemons(user, dexIndex, name, level) values (?,?,?,?)")) {
+        try (final PreparedStatement preparedStatement = getConnection()
+                .prepareStatement("insert into Pokemons(user, dexIndex, name, level) values (?,?,?,?)")) {
             for (Pokemon pokemon : pokemonList) {
                 preparedStatement.setLong(1, user.getIdLong());
                 preparedStatement.setInt(2, pokemon.getPokedexIndex());
@@ -285,8 +287,8 @@ public class DBService {
     }
 
     public void removePokemonFromUser(List<Pokemon> pokemonToRemove) {
-        try(final PreparedStatement preparedStatement =
-                    getConnection().prepareStatement("delete from Pokemons where rowid=?")) {
+        try (final PreparedStatement preparedStatement =
+                     getConnection().prepareStatement("delete from Pokemons where rowid=?")) {
             for (Pokemon pokemon : pokemonToRemove) {
                 preparedStatement.setInt(1, pokemon.getRowid());
                 preparedStatement.addBatch();
