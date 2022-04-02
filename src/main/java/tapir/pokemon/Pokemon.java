@@ -3,7 +3,7 @@ package tapir.pokemon;
 import org.jetbrains.annotations.NotNull;
 
 public class Pokemon implements Comparable<Pokemon>{
-    private int rowid;
+    private Integer rowid;
     private int pokedexIndex;
     private String name;
     private int level;
