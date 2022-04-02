@@ -11,14 +11,27 @@ import tapir.quiz.QuizQuestion;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
+import javax.persistence.*;
 
 public class DBService {
 
     private final String dbPath;
+    private final EntityManager em;
     private Set<Long> knownUsers;
     private SQLiteConnectionPoolDataSource poolDataSource;
 
     public DBService(Properties properties) {
+
+        EntityManagerFactory emf = Persistence.createEntityManagerFactory("emf-sqlite");
+        em = emf.createEntityManager();
+        em.getTransaction().begin();
+        entities.User user = new entities.User();
+        user.setId(111L);
+        user.setName("testUserJPA");
+        em.persist(user);
+        em.getTransaction().commit();
+
+
         dbPath = new File(properties.get("dbPath").toString().replace("\"", "")).getAbsolutePath();
         readUsers();
         try {
@@ -29,7 +42,6 @@ public class DBService {
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
-        System.out.println();
     }
 
     private void readUsers() {

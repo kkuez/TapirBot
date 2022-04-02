@@ -228,7 +228,7 @@ public class QuizModule extends ReceiveModule {
                             channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
                             getGeneralChannels().forEach(channel1 ->
                                     channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
-                            getDbService().enterQuestions(user, question, answers);
+                            getDbService().enterQuestion(user, question, answers);
                             status = QuizStatus.NONE;
                             break;
                         }
