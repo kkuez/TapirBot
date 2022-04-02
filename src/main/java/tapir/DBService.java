@@ -233,7 +233,7 @@ public class DBService {
 
     public void registerPokemon(User user, List<Pokemon> pokemonList) {
         try (final PreparedStatement preparedStatement =getConnection()
-                             .prepareStatement("insert into Pokemons(user, dexIndex, name, level) values (?,?,'?',?)")) {
+                             .prepareStatement("insert into Pokemons(user, dexIndex, name, level) values (?,?,?,?)")) {
             for (Pokemon pokemon : pokemonList) {
                 preparedStatement.setLong(1, user.getIdLong());
                 preparedStatement.setInt(2, pokemon.getPokedexIndex());
