@@ -113,8 +113,12 @@ public class QuizModule extends ReceiveModule {
                 "...so wahr ich Knut heiße!",
                 "Klingt doch ganz gut die Antwort!?",
                 "Naja... ich weiß ja nicht!",
+                "Weise Worte werden nicht jedem zu teil...",
+                "Da sprach wohl der Alkohol aus dir.",
                 "Früher hätte man sich für die Antwort verkriechen und schämen müssen!",
+                "Berti sagt \"C ist richtig!\"",
                 "Igitt!!!",
+                "Vertraue IMMER auf dein Bauchgefühl, außer du hast Diarrhoe!",
                 "Ob das wohl so klug war?",
                 "Da war wohl Verzweiflung am Werk!"
         );
