@@ -3,21 +3,26 @@
 	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
 	version="2.0">
 
-	<persistence-unit name="emf-sqlite">
-		
+	<persistence-unit name="dev">
 		<provider>org.hibernate.ejb.HibernatePersistence</provider>
-		
 		<properties>
-		
             <property name="hibernate.dialect" value="util.SQLiteDialect"/>
 			<property name="hibernate.hbm2ddl.auto" value="update"/>
 			<property name="hibernate.show_sql" value="true"/>
 			<property name="hibernate.format_sql" value="false"/>
-			
 			<property name="javax.persistence.jdbc.driver" value="org.sqlite.JDBC"/>
-			<property name="javax.persistence.jdbc.url" value="jdbc:sqlite:M:\\Tapir\\TapirDB - Kopie.db"/>
-			
+			<property name="javax.persistence.jdbc.url" value="jdbc:sqlite:M:\\Tapir\\TapirDB.db"/>
         </properties>
-        
+    </persistence-unit>
+	<persistence-unit name="prod">
+		<provider>org.hibernate.ejb.HibernatePersistence</provider>
+		<properties>
+            <property name="hibernate.dialect" value="util.SQLiteDialect"/>
+			<property name="hibernate.hbm2ddl.auto" value="update"/>
+			<property name="hibernate.show_sql" value="true"/>
+			<property name="hibernate.format_sql" value="false"/>
+			<property name="javax.persistence.jdbc.driver" value="org.sqlite.JDBC"/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:sqlite:/home/pi/Dokumente/Projekte/TapirBot/dbs/TapirDB.db"/>
+        </properties>
     </persistence-unit>
 </persistence>

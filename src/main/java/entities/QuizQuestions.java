@@ -1,10 +1,7 @@
 package entities;
 
 import javax.annotation.Nullable;
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.io.Serializable;
 
 @Entity
@@ -12,13 +9,14 @@ import java.io.Serializable;
 public class QuizQuestions implements Serializable {
     @Id
     @Column(name="id")
+    @GeneratedValue(strategy=GenerationType.IDENTITY)
     @Nullable
     private Integer id;
     private String text;
     private String Right_Answer;
-    private String Wrong_Answer1;
-    private String Wrong_Answer2;
-    private String Wrong_Answer3;
+    private String Wrong_Answer_1;
+    private String Wrong_Answer_2;
+    private String Wrong_Answer_3;
     private Long user;
 
     public Integer getId() {
@@ -45,28 +43,28 @@ public class QuizQuestions implements Serializable {
         Right_Answer = right_Answer;
     }
 
-    public String getWrong_Answer1() {
-        return Wrong_Answer1;
+    public String getWrong_Answer_1() {
+        return Wrong_Answer_1;
     }
 
-    public void setWrong_Answer1(String wrong_Answer1) {
-        Wrong_Answer1 = wrong_Answer1;
+    public void setWrong_Answer_1(String wrong_Answer_1) {
+        Wrong_Answer_1 = wrong_Answer_1;
     }
 
-    public String getWrong_Answer2() {
-        return Wrong_Answer2;
+    public String getWrong_Answer_2() {
+        return Wrong_Answer_2;
     }
 
-    public void setWrong_Answer2(String wrong_Answer2) {
-        Wrong_Answer2 = wrong_Answer2;
+    public void setWrong_Answer_2(String wrong_Answer_2) {
+        Wrong_Answer_2 = wrong_Answer_2;
     }
 
-    public String getWrong_Answer3() {
-        return Wrong_Answer3;
+    public String getWrong_Answer_3() {
+        return Wrong_Answer_3;
     }
 
-    public void setWrong_Answer3(String wrong_Answer3) {
-        Wrong_Answer3 = wrong_Answer3;
+    public void setWrong_Answer_3(String wrong_Answer_3) {
+        Wrong_Answer_3 = wrong_Answer_3;
     }
 
     public Long getUser() {

@@ -67,6 +67,11 @@ public class Main {
         }
     }
 
+    public static boolean isDev() {
+        final File[] files = new File(".").listFiles();
+        return Arrays.stream(files).filter(file -> file.getName().toLowerCase().contains("isdev")).findAny().isPresent();
+    }
+
     private static Set<TextChannel> getPokeChannels(JDA bot) {
         Set<TextChannel> pokemonChannels = new HashSet<>();
         try(InputStream setupPropertiesStream = new FileInputStream(new File(".", "setup.properties"))) {

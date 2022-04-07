@@ -20,6 +20,7 @@ import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -30,6 +31,7 @@ public class PokeModule extends ReceiveModule {
     private static Pokemon currentPokemon;
     private Integer pokemonMaxFreq;
     private static JDA bot;
+    private Map<User, LocalDateTime> userFrees = new HashMap<>();
     private static final int MAXCOUNT = 3;
     private static final Set<Swap> SWAP_PAIRS = new HashSet<>(2);
     private static final String WRITE_ME_THE_CODE_WITH = "Schreibe mir die Codes mit";
@@ -207,6 +209,20 @@ public class PokeModule extends ReceiveModule {
 
         switch (messages[1].toLowerCase()) {
             case "catch":
+                final long nowLong = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
+                long fiveHoursInSeconds = 18000L;
+                if(userFrees.containsKey(user)
+                        && nowLong - userFrees.get(user).toEpochSecond(ZoneOffset.UTC) < fiveHoursInSeconds) {
+                    final LocalDateTime allowedTime = userFrees.get(user).withNano(0);
+                    channel.sendMessage(user.getName() + ", du bist noch auf dem Weg zurück zum Pokécenter (!p free) " +
+                            "und kannst deshalb noch keine weiteren Pokemon fangen!\n(Du kannst wieder fangen am "
+                            + allowedTime.getDayOfMonth() + "."
+                            + allowedTime.getMonthValue() + "."
+                            + allowedTime.getYear() + " um " +
+                            + allowedTime.getHour() + ":"
+                            + allowedTime.getMinute() + " Uhr)").queue();
+                    return;
+                }
                 processCatch(user, event);
                 break;
             case "dex":
@@ -234,6 +250,7 @@ public class PokeModule extends ReceiveModule {
                     user.openPrivateChannel().queue((privateChannel) ->
                             privateChannel.sendMessage(pokemonBuilder).queue());
                     removeMessagesFromChannelIfWithCode(((PrivateMessageReceivedEvent) event.get()).getChannel());
+                    userFrees.put(user, LocalDateTime.now());
                 }
                 break;
         }

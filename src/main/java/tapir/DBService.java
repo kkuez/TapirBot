@@ -2,7 +2,6 @@ package tapir;
 
 import entities.QuizQuestions;
 import net.dv8tion.jda.api.entities.User;
-import org.sqlite.javax.SQLiteConnectionPoolDataSource;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
 import tapir.quiz.QuizModule;
@@ -17,11 +16,17 @@ import javax.persistence.*;
 public class DBService {
 
     private final String dbPath;
-    EntityManagerFactory emf = Persistence.createEntityManagerFactory("emf-sqlite");
+    EntityManagerFactory emf;
+
     private Set<Long> knownUsers;
-    private SQLiteConnectionPoolDataSource poolDataSource;
 
     public DBService(Properties properties) {
+        final boolean isDev = Main.isDev();
+        if (isDev) {
+            emf = Persistence.createEntityManagerFactory("dev");
+        } else {
+            emf = Persistence.createEntityManagerFactory("prod");
+        }
         dbPath = new File(properties.get("dbPath").toString().replace("\"", "")).getAbsolutePath();
         readUsers();
         try {
@@ -142,19 +147,21 @@ public class DBService {
     }
 
     public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers) {
-        final EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
+
         final QuizQuestions quizQuestionEntity = new QuizQuestions();
         quizQuestionEntity.setText(question.getText());
         quizQuestionEntity.setRight_Answer(answers.get(0).getText());
-        quizQuestionEntity.setWrong_Answer1(answers.get(1).getText());
-        quizQuestionEntity.setWrong_Answer2(answers.get(2).getText());
-        quizQuestionEntity.setWrong_Answer3(answers.get(3).getText());
+        quizQuestionEntity.setWrong_Answer_1(answers.get(1).getText());
+        quizQuestionEntity.setWrong_Answer_2(answers.get(2).getText());
+        quizQuestionEntity.setWrong_Answer_3(answers.get(3).getText());
         quizQuestionEntity.setUser(user.getIdLong());
+
+        final EntityManager em = emf.createEntityManager();
+        em.getTransaction().begin();
         em.persist(quizQuestionEntity);
         em.getTransaction().commit();
 
-        /*try (PreparedStatement statement =
+       /* try (PreparedStatement statement =
                      getConnection().prepareStatement("insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1, " +
                              "Wrong_Answer_2, Wrong_Answer_3, user) values(?,?,?,?,?,?)")) {
             statement.setString(1, mangleChars(question.getText()));
