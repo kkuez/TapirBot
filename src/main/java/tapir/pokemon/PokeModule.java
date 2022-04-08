@@ -437,7 +437,7 @@ public class PokeModule extends ReceiveModule {
     }
 
     private long getUserIdFromMention(String message) {
-        final String userIdString = message.replace("<@!", "").replace(">", "");
+        final String userIdString = message.replace("<", "").replace("@", "").replace("!", "").replace(">", "");
         return Long.parseLong(userIdString);
     }
 
@@ -558,13 +558,13 @@ public class PokeModule extends ReceiveModule {
             switch (status) {
                 case AWAITING_USER_TWO_SWAP_GRANT:
                     final boolean yes = messages[3].equals("Ja");
+                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                     if (!yes) {
                         MessageBuilder fromBuilderToAccept = new MessageBuilder(this.to.getName());
                         fromBuilderToAccept.append(SWAP_DECLINED_STRING);
                         this.from.openPrivateChannel().queue((privateChannel) ->
                                 privateChannel.sendMessage(fromBuilderToAccept.build()).queue());
 
-                        final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                         MessageBuilder messageBuilder = new MessageBuilder("Arbeitet...");
                         messageBuilder.setActionRows();
                         buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
@@ -596,6 +596,9 @@ public class PokeModule extends ReceiveModule {
                         }
                         index++;
                     }
+
+                    MessageBuilder messageBuilderDeleteButtons = new MessageBuilder("...");
+                    buttonClickEvent.getMessage().editMessage(messageBuilderDeleteButtons.build()).queue();
 
                     final Map<String, Pokemon> toCodeMap = getCodeMap(getDbService().getPokemonOfUser(to));
                     final MessageBuilder toBuilder = new MessageBuilder("Welches Pokemon willst du " +
@@ -694,10 +697,10 @@ public class PokeModule extends ReceiveModule {
                         toAcceptedToSwap = true;
                     }
 
-                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                    final ButtonClickEvent buttonClickEvent_waitingForPokemonAccept = (ButtonClickEvent) event.get();
                     MessageBuilder messageBuilder = new MessageBuilder("Warte auf Spieler...");
                     messageBuilder.setActionRows();
-                    buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+                    buttonClickEvent_waitingForPokemonAccept.getMessage().editMessage(messageBuilder.build()).queue();
                     status = SwapStatus.BOTH_ACCEPTED_POKEMON_SELECT;
                 }
                 return;
@@ -708,11 +711,11 @@ public class PokeModule extends ReceiveModule {
                     } else if (user.equals(to) && messages[2].equals("yes") && !toAcceptedToSwap) {
                         toAcceptedToSwap = true;
                     } else if (messages[2].equals("no")) {
-                        final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                        final ButtonClickEvent buttonClickEventBothAccepted = (ButtonClickEvent) event.get();
                         MessageBuilder messageBuilder = new MessageBuilder(user.getName());
                         messageBuilder.append(SWAP_DECLINED_STRING);
                         messageBuilder.setActionRows();
-                        buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+                        buttonClickEventBothAccepted.getMessage().editMessage(messageBuilder.build()).queue();
 
 
                         if (!user.equals(from)) {
@@ -745,10 +748,10 @@ public class PokeModule extends ReceiveModule {
                         removeMessagesFromChannelIfWithCode(privateChannel);
                     });
 
-                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                    final ButtonClickEvent buttonClickEventBothAccepted = (ButtonClickEvent) event.get();
                     MessageBuilder messageBuilder = new MessageBuilder("Arbeitet...");
                     messageBuilder.setActionRows();
-                    buttonClickEvent.getMessage().editMessage(messageBuilder.build()).queue();
+                    buttonClickEventBothAccepted.getMessage().editMessage(messageBuilder.build()).queue();
 
 
                     MessageBuilder toBuilderToAccept = new MessageBuilder(this.from.getName());
