@@ -265,7 +265,10 @@ public class DBService {
                 preparedStatement.addBatch();
             }
 
-            preparedStatement.executeUpdate();
+            final int[] rows = preparedStatement.executeBatch();
+            if(rows.length != pokemonList.size()) {
+                throw new RuntimeException("Not all pokemons inserted!");
+            }
         } catch (SQLException throwables) {
             throwables.printStackTrace();
         }
@@ -300,7 +303,10 @@ public class DBService {
                 preparedStatement.setInt(1, pokemon.getRowid());
                 preparedStatement.addBatch();
             }
-            preparedStatement.executeUpdate();
+            final int[] rows = preparedStatement.executeBatch();
+            if(rows.length != pokemonToRemove.size()) {
+                throw new RuntimeException("Not all pokemons removed!");
+            }
         } catch (SQLException e) {
             e.printStackTrace();
             throw new RuntimeException("Couldnt Remove Pokemon", e);
