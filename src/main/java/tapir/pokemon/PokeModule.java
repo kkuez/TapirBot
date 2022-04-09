@@ -209,10 +209,7 @@ public class PokeModule extends ReceiveModule {
 
         switch (messages[1].toLowerCase()) {
             case "catch":
-                final long nowLong = LocalDateTime.now().toEpochSecond(ZoneOffset.UTC);
-                long fiveHoursInSeconds = 18000L;
-                if(userFrees.containsKey(user)
-                        && nowLong - userFrees.get(user).toEpochSecond(ZoneOffset.UTC) < fiveHoursInSeconds) {
+                if(userFrees.containsKey(user) && LocalDateTime.now().isBefore(userFrees.get(user))) {
                     final LocalDateTime allowedTime = userFrees.get(user).withNano(0);
                     channel.sendMessage(user.getName() + ", du bist noch auf dem Weg zurück zum Pokécenter (!p free) " +
                             "und kannst deshalb noch keine weiteren Pokemon fangen!\n(Du kannst wieder fangen am "
