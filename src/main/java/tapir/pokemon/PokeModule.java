@@ -250,7 +250,7 @@ public class PokeModule extends ReceiveModule {
                     user.openPrivateChannel().queue((privateChannel) ->
                             privateChannel.sendMessage(pokemonBuilder).queue());
                     removeMessagesFromChannelIfWithCode(((PrivateMessageReceivedEvent) event.get()).getChannel());
-                    userFrees.put(user, LocalDateTime.now());
+                    userFrees.put(user, LocalDateTime.now().plusHours(5));
                 }
                 break;
         }
