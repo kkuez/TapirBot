@@ -627,6 +627,12 @@ public class PokeModule extends ReceiveModule {
                         //do nothing cuz planned
                     }
 
+                    final String swapString = messages[2].replace(" ", "").toLowerCase(Locale.ROOT);
+                    boolean validSwapString = checkSwapStringValidityAndAnswerIfNeeded(event.get(), user, swapString);
+                    if(!validSwapString) {
+                        return;
+                    }
+
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
                     List<Pokemon> pokemonList;
                     if (this.from.equals(user)) {
@@ -638,7 +644,7 @@ public class PokeModule extends ReceiveModule {
                         throw new RuntimeException("User konnte nicht in SwapPair gefunden werden!");
                     }
 
-                    for (String code : messages[2].split(",")) {
+                    for (String code : swapString.split(",")) {
                         pokemonList.add(codeMap.get(code));
                     }
                     user.openPrivateChannel().queue((privateChannel) ->
@@ -647,6 +653,12 @@ public class PokeModule extends ReceiveModule {
                 }
                 return;
                 case SECOND_USER_OFFER: {
+                    final String swapString = messages[2].replace(" ", "").toLowerCase(Locale.ROOT);
+                    boolean validSwapString = checkSwapStringValidityAndAnswerIfNeeded(event.get(), user, swapString);
+                    if(!validSwapString) {
+                        return;
+                    }
+
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
                     List<Pokemon> pokemonList;
                     if (this.from.equals(user)) {
@@ -658,7 +670,7 @@ public class PokeModule extends ReceiveModule {
                         throw new RuntimeException("User konnte nicht in SwapPair gefunden werden!");
                     }
 
-                    for (String code : messages[2].split(",")) {
+                    for (String code : swapString.split(",")) {
                         pokemonList.add(codeMap.get(code));
                     }
 
@@ -761,6 +773,27 @@ public class PokeModule extends ReceiveModule {
                     break;
             }
         }
+    }
+
+    private boolean checkSwapStringValidityAndAnswerIfNeeded(Event event, User user, String swapString) {
+        if(swapString.contains(".")) {
+            user.openPrivateChannel().queue((privateChannel) ->
+                    privateChannel.sendMessage("Irgendwo in deinem String hat sich ein Punkt (\".\") versteckt." +
+                            " \nVersuch es erneut!").queue());
+            System.out.println("swapString user " + user.getName() + ": " + swapString);
+            return false;
+        }
+
+        for (String code : swapString.split(",")) {
+            if(code.length() > 2) {
+                user.openPrivateChannel().queue((privateChannel) ->
+                        privateChannel.sendMessage("Ich kann den Code \"" + code + "\" nicht lesen." +
+                                " \nVersuch es erneut!").queue());
+                System.out.println("swapString user " + user.getName() + ": " + swapString);
+                return false;
+            }
+        }
+        return true;
     }
 
     private enum SwapStatus {

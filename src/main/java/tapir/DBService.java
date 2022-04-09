@@ -161,20 +161,6 @@ public class DBService {
         em.persist(quizQuestionEntity);
         em.getTransaction().commit();
 
-       /* try (PreparedStatement statement =
-                     getConnection().prepareStatement("insert into QuizQuestions(text, Right_Answer, Wrong_Answer_1, " +
-                             "Wrong_Answer_2, Wrong_Answer_3, user) values(?,?,?,?,?,?)")) {
-            statement.setString(1, mangleChars(question.getText()));
-            statement.setString(2, mangleChars(answers.get(0).getText()));
-            statement.setString(3, mangleChars(answers.get(1).getText()));
-            statement.setString(4, mangleChars(answers.get(2).getText()));
-            statement.setString(5, mangleChars(answers.get(3).getText()));
-            statement.setLong(6, user.getIdLong());
-            statement.addBatch();
-            statement.executeUpdate();
-        } catch (SQLException e) {
-            throw new TapirException("Could not enter question for user " + user.getIdLong(), e);
-        }*/
     }
 
     private String mangleChars(String input) {
