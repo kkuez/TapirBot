@@ -50,13 +50,13 @@ public class PokeModule extends ReceiveModule {
             boolean isDebug = pokemonMaxFreq < 100;
             while (true) {
                 //long timeToWait = 10000;
-                long timeToWait =  1000;
+                long timeToWait = 1000;
 
                 while (!isDebug && timeToWait < 300000) {
                     final double random = Math.random();
                     timeToWait = Math.round(random * pokemonMaxFreq * 1000);
                 }
-                if(isDebug) {
+                if (isDebug) {
                     timeToWait = pokemonMaxFreq * 1000;
                 }
                 System.out.println("Starting new Pokemon-Loop, next pokemon: "
@@ -203,7 +203,7 @@ public class PokeModule extends ReceiveModule {
 
         switch (messages[1].toLowerCase()) {
             case "catch":
-                if(userFrees.containsKey(user) && LocalDateTime.now().isBefore(userFrees.get(user))) {
+                if (userFrees.containsKey(user) && LocalDateTime.now().isBefore(userFrees.get(user))) {
                     final LocalDateTime allowedTime = userFrees.get(user).withNano(0);
                     channel.sendMessage(user.getName() + ", du bist noch auf dem Weg zurück zum Pokécenter (!p free) " +
                             "und kannst deshalb noch keine weiteren Pokemon fangen!\n(Du kannst wieder fangen am "
@@ -356,39 +356,39 @@ public class PokeModule extends ReceiveModule {
         }
 
         final GuildMessageReceivedEvent guildMessageReceivedEvent = (GuildMessageReceivedEvent) event.get();
-        List<Pokemon> pokemonList;
+        final List<Pokemon> pokemonList = new ArrayList<>();
         StringBuilder builder = new StringBuilder("__*");
-        // TODO das riesige try catch begrenzen
+        String pokedexURL = "";
         try {
-            final String pokedexURL;
             if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
                 final long id = getUserIdFromMention(messages[2]);
 
-                pokemonList = getDbService().getPokemonOfUser(id);
+                pokemonList.addAll(getDbService().getPokemonOfUser(id));
                 Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
                 builder.append(mentionedUser.get("name")).append("* hat");
                 pokedexURL = createPokedexPage(pokemonList, mentionedUser.get("name"));
 
             } else {
-                pokemonList = getDbService().getPokemonOfUser(user);
+                pokemonList.addAll(getDbService().getPokemonOfUser(user));
                 builder.append(user.getName()).append("*, du hast");
                 pokedexURL = createPokedexPage(pokemonList, user.getName());
             }
-
-            final int size = pokemonList.stream().map(Pokemon::getName).collect(Collectors.toSet()).size();
-            if (size == 0) {
-                builder.append(" noch keine");
-            } else if (size < 50) {
-                builder.append(" erst **").append(size).append("** unterschiedliche");
-            } else {
-                builder.append(" schon **").append(size).append("** unterschiedliche");
-            }
-            builder.append(" Pokémon gefangen:__\n").append(pokedexURL);
-
-            guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        final int size = pokemonList.stream().map(Pokemon::getName).collect(Collectors.toSet()).size();
+        if (size == 0) {
+            builder.append(" noch keine");
+        } else if (size < 50) {
+            builder.append(" erst **").append(size).append("** unterschiedliche");
+        } else {
+            builder.append(" schon **").append(size).append("** unterschiedliche");
+        }
+        builder.append(" Pokémon gefangen:__\n").append(pokedexURL);
+
+        guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
+
     }
 
     private String createPokedexPage(List<Pokemon> pokemonList, String username) throws IOException {

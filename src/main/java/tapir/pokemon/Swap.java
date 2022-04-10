@@ -148,14 +148,11 @@ public class Swap {
                 }
 
                 final Map<String, Pokemon> codeMap = pokeModule.getCodeMap(dbService.getPokemonOfUser(user));
-                List<Pokemon> pokemonList;
+                List<Pokemon> pokemonList = null;
                 if (this.from.equals(user)) {
                     pokemonList = this.fromUserSwapPokemons;
                 } else if (this.to.equals(user)) {
                     pokemonList = this.toUserSwapPokemons;
-                } else {
-                    //TODO aufräumen bei solch einem Fall
-                    throw new RuntimeException("User konnte nicht in SwapPair gefunden werden!");
                 }
 
                 for (String code : swapString.split(",")) {
@@ -174,14 +171,11 @@ public class Swap {
                 }
 
                 final Map<String, Pokemon> codeMap = pokeModule.getCodeMap(dbService.getPokemonOfUser(user));
-                List<Pokemon> pokemonList;
+                List<Pokemon> pokemonList = null;
                 if (this.from.equals(user)) {
                     pokemonList = this.fromUserSwapPokemons;
                 } else if (this.to.equals(user)) {
                     pokemonList = this.toUserSwapPokemons;
-                } else {
-                    //TODO aufräumen bei solch einem Fall
-                    throw new RuntimeException("User konnte nicht in SwapPair gefunden werden!");
                 }
 
                 for (String code : swapString.split(",")) {
