@@ -34,7 +34,7 @@ public class UserWrapper {
 
     public static void init(DBService dbService, Set<TextChannel> allowedChannels, Set<TextChannel> pokeChannels,
                             Integer pokemonMaxFreq, Set<Long> userNotAllowedToAsk, JDA bot) {
-        pokeModule = new PokeModule(dbService, pokeChannels, pokemonMaxFreq, userNotAllowedToAsk, bot);
+        pokeModule = new PokeModule(dbService, pokeChannels, pokemonMaxFreq, userNotAllowedToAsk);
     }
 
     public Map<Class, ReceiveModule> getModules() {

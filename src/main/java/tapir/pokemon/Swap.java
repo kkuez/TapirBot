@@ -9,18 +9,17 @@ import net.dv8tion.jda.api.interactions.components.Button;
 import tapir.DBService;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static tapir.pokemon.PokeModule.SWAP_DECLINED_STRING;
 
 public class Swap {
-    private User from;
-    private User to;
-    private DBService dbService;
+    private final User from;
+    private final User to;
+    private final DBService dbService;
     private final List<Pokemon> fromUserSwapPokemons = new ArrayList<>();
     private final List<Pokemon> toUserSwapPokemons = new ArrayList<>();
     private SwapStatus status = SwapStatus.AWAITING_USER_TWO_SWAP_GRANT;
-    private UUID uuid = UUID.randomUUID();
+    private final UUID uuid = UUID.randomUUID();
     private boolean fromAcceptedToSwap = false;
     private boolean toAcceptedToSwap = false;
 
@@ -95,7 +94,7 @@ public class Swap {
                         "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons tauschen " +
                         "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!");
 
-                List<String> fromCodeMapKeys = fromCodeMap.keySet().stream().collect(Collectors.toList());
+                List<String> fromCodeMapKeys = new ArrayList<>(fromCodeMap.keySet());
                 Collections.sort(fromCodeMapKeys);
 
                 int index = 0;
@@ -119,7 +118,7 @@ public class Swap {
                         ":octagonal_sign: Wenn du mehrere Pokemon tauschen möchtest, solltest du die Möglichkeit" +
                         " mit der Trennung durch ein Komma nutzen!:octagonal_sign: ");
 
-                List<String> toCodeMapKeys = toCodeMap.keySet().stream().collect(Collectors.toList());
+                List<String> toCodeMapKeys = new ArrayList<>(toCodeMap.keySet());
                 Collections.sort(toCodeMapKeys);
 
                 index = 0;

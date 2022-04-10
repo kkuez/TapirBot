@@ -29,19 +29,17 @@ import java.util.stream.Collectors;
 public class PokeModule extends ReceiveModule {
 
     private static Pokemon currentPokemon;
-    private Integer pokemonMaxFreq;
-    private static JDA bot;
-    private Map<User, LocalDateTime> userFrees = new HashMap<>();
     private static final int MAXCOUNT = 3;
-    static final Set<Swap> SWAP_PAIRS = new HashSet<>(2);
-    static final String SWAP_DECLINED_STRING = " hat abgelehnt, Tausch beendet :(";
     private static final Pattern CODE_PATTERN = Pattern.compile("[a-z][a-z] \\t\\| [A-Z][a-z]* Lvl\\..*");
+    static final String SWAP_DECLINED_STRING = " hat abgelehnt, Tausch beendet :(";
+    static final Set<Swap> SWAP_PAIRS = new HashSet<>(2);
+    private final Integer pokemonMaxFreq;
+    private final Map<User, LocalDateTime> userFrees = new HashMap<>();
 
     public PokeModule(DBService dbService, Set<TextChannel> allowedChannels, Integer pokemonMaxFreq,
-                      Set<Long> userNotAllowedToAsk, JDA bot) {
+                      Set<Long> userNotAllowedToAsk) {
         super(dbService, allowedChannels, userNotAllowedToAsk);
         this.pokemonMaxFreq = pokemonMaxFreq;
-        this.bot = bot;
         startCatchLoop();
     }
 
@@ -49,10 +47,7 @@ public class PokeModule extends ReceiveModule {
 
         final Runnable runnable = () -> {
             long oneHourAsMilliSecs = 3600000;
-            boolean isDebug = false;
-            if(pokemonMaxFreq < 100) {
-                isDebug = true;
-            }
+            boolean isDebug = pokemonMaxFreq < 100;
             while (true) {
                 //long timeToWait = 10000;
                 long timeToWait =  1000;
@@ -80,8 +75,8 @@ public class PokeModule extends ReceiveModule {
                     e.printStackTrace();
                 }
             }
-        }; final Runnable loopRunnable = runnable;
-        getExecutorService().submit(loopRunnable);
+        };
+        getExecutorService().submit(runnable);
     }
 
     private void makeOldDisappear() {
@@ -214,7 +209,7 @@ public class PokeModule extends ReceiveModule {
                             "und kannst deshalb noch keine weiteren Pokemon fangen!\n(Du kannst wieder fangen am "
                             + allowedTime.getDayOfMonth() + "."
                             + allowedTime.getMonthValue() + "."
-                            + allowedTime.getYear() + " um " +
+                            + allowedTime.getYear() + " um "
                             + allowedTime.getHour() + ":"
                             + allowedTime.getMinute() + " Uhr)").queue();
                     return;
@@ -235,7 +230,7 @@ public class PokeModule extends ReceiveModule {
                 } else {
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
                     final List<Pokemon> pokemonToDelete = Arrays.stream(messages[2].split(","))
-                            .map(code -> codeMap.get(code)).collect(Collectors.toList());
+                            .map(codeMap::get).collect(Collectors.toList());
                     StringBuilder pokemonBuilder = new StringBuilder();
                     getDbService().removePokemonFromUser(pokemonToDelete);
 
@@ -321,7 +316,7 @@ public class PokeModule extends ReceiveModule {
                 " zu bekommen__ :octagonal_sign: ");
 
         Map<String, Pokemon> codeMap = getCodeMap(pokemonOfUser);
-        List<String> codeMapKeys = codeMap.keySet().stream().collect(Collectors.toList());
+        List<String> codeMapKeys = new ArrayList<>(codeMap.keySet());
         Collections.sort(codeMapKeys);
 
         int index = 0;
