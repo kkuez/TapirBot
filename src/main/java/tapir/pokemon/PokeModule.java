@@ -171,7 +171,7 @@ public class PokeModule extends ReceiveModule {
         return new Pokemon(null, (int) index, name, (int) level);
     }
 
-    private static String readAll(Reader rd) throws IOException {
+    private String readAll(Reader rd) throws IOException {
         StringBuilder sb = new StringBuilder();
         int cp;
         while ((cp = rd.read()) != -1) {
@@ -247,7 +247,7 @@ public class PokeModule extends ReceiveModule {
         }
     }
 
-    static void removeMessagesFromChannelIfWithCode(PrivateChannel channel) {
+    void removeMessagesFromChannelIfWithCode(PrivateChannel channel) {
         channel.getIterableHistory()
                 .takeAsync(100)
                 .thenApply(list -> {
@@ -301,7 +301,7 @@ public class PokeModule extends ReceiveModule {
             fromUser.openPrivateChannel().queue((channel1) -> channel1.sendMessage(fromMessageBuilder.build())
                     .queue());
         } else if (swapPairOpt.isPresent()) {
-            swapPairOpt.get().processSwapFurther(event, messages, user);
+            swapPairOpt.get().processSwapFurther(event, messages, user, this);
         }
     }
 
@@ -332,7 +332,7 @@ public class PokeModule extends ReceiveModule {
         }
     }
 
-    static Map<String, Pokemon> getCodeMap(List<Pokemon> pokemonOfUser) {
+    Map<String, Pokemon> getCodeMap(List<Pokemon> pokemonOfUser) {
         Map<String, Pokemon> codeMap = new HashMap<>(pokemonOfUser.size());
         char a = 97;
         char aa = 97;

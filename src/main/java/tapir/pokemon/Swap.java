@@ -65,7 +65,7 @@ public class Swap {
         return fromUserContained || toUserContained;
     }
 
-    public void processSwapFurther(Optional<Event> event, String[] messages, User user) {
+    public void processSwapFurther(Optional<Event> event, String[] messages, User user, PokeModule pokeModule) {
         switch (status) {
             case AWAITING_USER_TWO_SWAP_GRANT:
                 final boolean yes = messages[3].equals("Ja");
@@ -89,7 +89,7 @@ public class Swap {
                     return;
                 }
 
-                final Map<String, Pokemon> fromCodeMap = PokeModule.getCodeMap(dbService.getPokemonOfUser(from));
+                final Map<String, Pokemon> fromCodeMap = pokeModule.getCodeMap(dbService.getPokemonOfUser(from));
                 MessageBuilder fromBuilder = new MessageBuilder("Welches Pokemon willst du " +
                         "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons tauschen " +
                         "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!");
@@ -111,7 +111,7 @@ public class Swap {
                 MessageBuilder messageBuilderDeleteButtons = new MessageBuilder("...");
                 buttonClickEvent.getMessage().editMessage(messageBuilderDeleteButtons.build()).queue();
 
-                final Map<String, Pokemon> toCodeMap = PokeModule.getCodeMap(dbService.getPokemonOfUser(to));
+                final Map<String, Pokemon> toCodeMap = pokeModule.getCodeMap(dbService.getPokemonOfUser(to));
                 final MessageBuilder toBuilder = new MessageBuilder("Welches Pokemon willst du " +
                         "tauschen?\nSchreibe mir die Codes mit !p swap <CODE> (wenn du mehrere Pokemons freilassen " +
                         "willst, dann trenne die Codes mit einem Komma, z. B. \"!p swap ac,cx,de\")!\n" +
@@ -147,7 +147,7 @@ public class Swap {
                     return;
                 }
 
-                final Map<String, Pokemon> codeMap = PokeModule.getCodeMap(dbService.getPokemonOfUser(user));
+                final Map<String, Pokemon> codeMap = pokeModule.getCodeMap(dbService.getPokemonOfUser(user));
                 List<Pokemon> pokemonList;
                 if (this.from.equals(user)) {
                     pokemonList = this.fromUserSwapPokemons;
@@ -173,7 +173,7 @@ public class Swap {
                     return;
                 }
 
-                final Map<String, Pokemon> codeMap = PokeModule.getCodeMap(dbService.getPokemonOfUser(user));
+                final Map<String, Pokemon> codeMap = pokeModule.getCodeMap(dbService.getPokemonOfUser(user));
                 List<Pokemon> pokemonList;
                 if (this.from.equals(user)) {
                     pokemonList = this.fromUserSwapPokemons;
@@ -268,7 +268,7 @@ public class Swap {
                 this.from.openPrivateChannel().queue((privateChannel) ->
                 {
                     privateChannel.sendMessage(fromBuilderToAccept.build()).queue();
-                    PokeModule.removeMessagesFromChannelIfWithCode(privateChannel);
+                    pokeModule.removeMessagesFromChannelIfWithCode(privateChannel);
                 });
 
                 final ButtonClickEvent buttonClickEventBothAccepted = (ButtonClickEvent) event.get();
@@ -281,7 +281,7 @@ public class Swap {
                 toBuilderToAccept.append(" hat angenommen, Tausch beendet :)");
                 this.to.openPrivateChannel().queue((privateChannel) -> {
                     privateChannel.sendMessage(toBuilderToAccept.build()).queue();
-                    PokeModule.removeMessagesFromChannelIfWithCode(privateChannel);
+                    pokeModule.removeMessagesFromChannelIfWithCode(privateChannel);
                 });
                 PokeModule.SWAP_PAIRS.remove(this);
                 break;
