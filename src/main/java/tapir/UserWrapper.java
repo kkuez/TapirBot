@@ -22,7 +22,7 @@ public class UserWrapper {
     private static PokeModule pokeModule;
     private static final String PROGRAM_NAME = "TapirBot.jar";
     private Map<Class, ReceiveModule> modules;
-    private User user;
+    private final User user;
     private LocalDateTime lastInteraction = LocalDateTime.now().minusMinutes(1);
 
     public UserWrapper(User user) {

@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 public class PokeModule extends ReceiveModule {
 
+    private static final int POKEMON_TOP_INDEX = 151;
     private static Pokemon currentPokemon;
     private static final int MAXCOUNT = 3;
     private static final Pattern CODE_PATTERN = Pattern.compile("[a-z][a-z] \\t\\| [A-Z][a-z]* Lvl\\..*");
@@ -143,7 +144,7 @@ public class PokeModule extends ReceiveModule {
 
     private Pokemon getPokemon() throws IOException {
         long index = 0;
-        while (index == 0 || index == 152) {
+        while (index == 0 || index == POKEMON_TOP_INDEX + 1) {
             double random = Math.random();
             index = Math.round(152 * random);
         }
@@ -194,7 +195,8 @@ public class PokeModule extends ReceiveModule {
                 "pokedex",
                 "pokédex",
                 "swap",
-                "free"
+                "free",
+                "orden"
         );
     }
 
@@ -215,6 +217,7 @@ public class PokeModule extends ReceiveModule {
                     return;
                 }
                 processCatch(user, event);
+                checkForOrden(user);
                 break;
             case "dex":
             case "pokedex":
@@ -244,6 +247,41 @@ public class PokeModule extends ReceiveModule {
                     userFrees.put(user, LocalDateTime.now().plusHours(5));
                 }
                 break;
+            case "orden":
+                final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                if(messages.length != 4) {
+                    return;
+                } else if(messages[3].equals("yes")) {
+                    getDbService().registerNewOrden(user);
+                    MessageBuilder messageBuilder = new MessageBuilder("Angenommen, herzlichen Glückwunsch zu deinem neuen Orden :)");
+                    messageBuilder.setActionRows();
+                    buttonClickEvent.editMessage(messageBuilder.build()).queue();
+                } else if(messages[3].equals("no")) {
+                    MessageBuilder messageBuilder = new MessageBuilder("Nicht angenommen, du behälst deine Pokemon");
+                    messageBuilder.append(" und bekommst keinen Orden.");
+                    messageBuilder.setActionRows();
+                    buttonClickEvent.editMessage(messageBuilder.build()).queue();
+                }
+                break;
+        }
+    }
+
+    private void checkForOrden(User user) {
+        int countUserPokemons = getDbService().getPokemonOfUser(user).stream().map(Pokemon::getName)
+                .collect(Collectors.toSet()).size();
+        if (countUserPokemons > POKEMON_TOP_INDEX) {
+            user.openPrivateChannel().queue(privateChannel -> {
+                MessageBuilder messageBuilder = new MessageBuilder("Hey, du hast ALLE Pokémon gefangen, unfassbar, ");
+                messageBuilder.append("Herzlichen Glückwunsch!\nDie Pokeliga-Leitung bietet dir im Tausch gegen ")
+                        .append("deine Pokémon einen Orden an, nimmst du an? ;)\n")
+                        .append("(Tauscht alle deine Pokémon gegen einen Orden und du kannst von ")
+                        .append("vorne anfangen, ein weiterer Schritt zum Sieg!)");
+                messageBuilder.setActionRows(
+                        ActionRow.of(Button.primary("poke orden " + user.getIdLong() + " yes", "Ja"),
+                                Button.primary("poke orden " + user.getIdLong() + " no", "Nein")));
+
+                privateChannel.sendMessage(messageBuilder.build()).queue();
+            });
         }
     }
 
@@ -385,8 +423,13 @@ public class PokeModule extends ReceiveModule {
         } else {
             builder.append(" schon **").append(size).append("** unterschiedliche");
         }
-        builder.append(" Pokémon gefangen:__\n").append(pokedexURL);
+        int medalCount = getDbService().getOrdenCount(user);
+        StringBuilder ordenString = new StringBuilder();
+        for(int i = 0;i<medalCount;i++) {
+            ordenString.append(":medal:");
+        }
 
+        builder.append(" Pokémon gefangen und ").append(ordenString).append(" Orden:__\n").append(pokedexURL);
         guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
 
     }
@@ -479,7 +522,6 @@ public class PokeModule extends ReceiveModule {
                 .append("* hats gefangen!")
                 .build();
         buttonClickEvent.getMessage().editMessage(message).queue();
-
     }
 
     @Override

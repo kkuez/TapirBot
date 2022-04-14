@@ -298,4 +298,30 @@ public class DBService {
             throw new RuntimeException("Couldnt Remove Pokemon", e);
         }
     }
+
+    public void registerNewOrden(User user) {
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate(
+                    "insert into User_Ordencount(user) values(" + user.getIdLong() + ")");
+            removePokemonFromUser(getPokemonOfUser(user));
+        } catch (SQLException e) {
+            throw new TapirException("Could not set Orden for user " + user.getName() + " " + user.getIdLong(), e);
+        }
+    }
+
+    public int getOrdenCount(User user) {
+        int count = 0;
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs =
+                     statement.executeQuery("select count(*) as count from User_Ordencount where user="
+                             + user.getIdLong())) {
+            while (rs.next()) {
+                count = rs.getInt("count");
+            }
+        } catch (SQLException e) {
+            throw new TapirException("Could not get countof orden  for user " + user.getName() + " "
+                    + user.getIdLong(), e);
+        }
+        return count;
+    }
 }
