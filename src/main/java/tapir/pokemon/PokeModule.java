@@ -9,8 +9,8 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
-import net.dv8tion.jda.api.requests.RestAction;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import tapir.DBService;
@@ -20,7 +20,6 @@ import java.io.*;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -423,15 +422,23 @@ public class PokeModule extends ReceiveModule {
         } else {
             builder.append(" schon **").append(size).append("** unterschiedliche");
         }
-        int medalCount = getDbService().getOrdenCount(user);
-        StringBuilder ordenString = new StringBuilder();
-        for(int i = 0;i<medalCount;i++) {
-            ordenString.append(":medal:");
-        }
 
+        String ordenString = getOrdenString(user);
         builder.append(" Pokémon gefangen und ").append(ordenString).append(" Orden:__\n").append(pokedexURL);
         guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
+    }
 
+    private String getOrdenString(User user) {
+        int medalCount = getDbService().getOrdenCount(user);
+        String ordenString = "";
+        if(medalCount > 0) {
+            for (int i = 0; i < medalCount; i++) {
+                ordenString += ":medal:";
+            }
+        } else {
+            ordenString = "noch keine";
+        }
+        return ordenString;
     }
 
     private String createPokedexPage(List<Pokemon> pokemonList, String username) throws IOException {
