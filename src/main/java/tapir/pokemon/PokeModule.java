@@ -397,7 +397,7 @@ public class PokeModule extends ReceiveModule {
         StringBuilder builder = new StringBuilder("__*");
         String pokedexURL = "";
         try {
-            if (messages.length > 2 && messages[2].contains("<@!") && messages[2].contains(">")) {
+            if (messages.length > 2 && messages[2].contains("<@") && messages[2].contains(">")) {
                 final long id = getUserIdFromMention(messages[2]);
 
                 pokemonList.addAll(getDbService().getPokemonOfUser(id));
