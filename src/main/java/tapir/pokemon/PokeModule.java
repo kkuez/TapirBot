@@ -255,6 +255,8 @@ public class PokeModule extends ReceiveModule {
                     MessageBuilder messageBuilder = new MessageBuilder("Angenommen, herzlichen Glückwunsch zu deinem neuen Orden :)");
                     messageBuilder.setActionRows();
                     buttonClickEvent.editMessage(messageBuilder.build()).queue();
+                    getGeneralChannels().forEach(channel1 -> channel1.sendMessage(":medal:" + user.getName()
+                            + " hat einen nigelnagelneuen Orden!!!:medal:").queue());
                 } else if(messages[3].equals("no")) {
                     MessageBuilder messageBuilder = new MessageBuilder("Nicht angenommen, du behälst deine Pokemon");
                     messageBuilder.append(" und bekommst keinen Orden.");
