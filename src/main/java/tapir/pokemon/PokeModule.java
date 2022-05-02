@@ -247,6 +247,11 @@ public class PokeModule extends ReceiveModule {
                 }
                 break;
             case "orden":
+                if(messages.length == 2) {
+                    checkForOrden(user);
+                    return;
+                }
+
                 final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                 if(messages.length != 4) {
                     return;
@@ -270,7 +275,7 @@ public class PokeModule extends ReceiveModule {
     private void checkForOrden(User user) {
         int countUserPokemons = getDbService().getPokemonOfUser(user).stream().map(Pokemon::getName)
                 .collect(Collectors.toSet()).size();
-        if (countUserPokemons > POKEMON_TOP_INDEX) {
+        if (countUserPokemons >= POKEMON_TOP_INDEX) {
             user.openPrivateChannel().queue(privateChannel -> {
                 MessageBuilder messageBuilder = new MessageBuilder("Hey, du hast ALLE Pokémon gefangen, unfassbar, ");
                 messageBuilder.append("Herzlichen Glückwunsch!\nDie Pokeliga-Leitung bietet dir im Tausch gegen ")

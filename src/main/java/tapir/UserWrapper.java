@@ -23,7 +23,7 @@ public class UserWrapper {
     private static final String PROGRAM_NAME = "TapirBot.jar";
     private Map<Class, ReceiveModule> modules;
     private final User user;
-    private LocalDateTime lastInteraction = LocalDateTime.now().minusMinutes(1);
+    private Long lastInteraction = System.currentTimeMillis() - 1000;
 
     public UserWrapper(User user) {
         if (modules == null) {
@@ -46,7 +46,9 @@ public class UserWrapper {
     }
 
     public void handleButton(ButtonClickEvent event, String[] split) {
-
+    if(!checkForLastInteraction()) {
+        return;
+    }
         switch (split[0].toLowerCase()) {
             case "quiz":
                 if (!split[2].equals(event.getInteraction().getMember().getId())) {
@@ -66,10 +68,16 @@ public class UserWrapper {
                         event.getButton().getId().split(" "), event.getChannel(), Optional.of(event));
                 break;
         }
+        // https://stackoverflow.com/questions/70386672/button-interaction-failed
+        // Buttons always have to be acknowledged like this
+        event.deferEdit().queue();
     }
 
     public void handle(GuildMessageReceivedEvent event, DBService dbService, Set<TextChannel> allowedChannels,
                        Set<Long> userNotAllowedToAsk) {
+        if(!checkForLastInteraction()) {
+            return;
+        }
         final String message = event.getMessage().getContentRaw().replace("!", "").split(" ")[0].toLowerCase();
         //TODO Very late init of modules here, init in constructor
         switch (message) {
@@ -118,8 +126,21 @@ public class UserWrapper {
         }
     }
 
+    private boolean checkForLastInteraction() {
+        boolean valid = true;
+        final Long now = System.currentTimeMillis();
+        if((now - lastInteraction) < 300) {
+            valid = false;
+        }
+        lastInteraction = now;
+        return valid;
+    }
+
     public void handlePM(PrivateMessageReceivedEvent event, DBService dbService, JDA bot,
                          Set<TextChannel> allowedChannels, Set<Long> userNotAllowedToAsk) {
+        if(!checkForLastInteraction()) {
+            return;
+        }
         final String fullWithoutAusrufezeichen = event.getMessage().getContentRaw().replace("!", "");
         final String message = fullWithoutAusrufezeichen.split(" ")[0].toLowerCase();
         switch (message) {
@@ -145,13 +166,5 @@ public class UserWrapper {
                     }
                 }
         }
-    }
-
-    public LocalDateTime getLastInteraction() {
-        return lastInteraction;
-    }
-
-    public void setLastInteraction(LocalDateTime lastInteraction) {
-        this.lastInteraction = lastInteraction;
     }
 }

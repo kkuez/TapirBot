@@ -303,9 +303,13 @@ public class DBService {
         try (Statement statement = getConnection().createStatement();) {
             statement.executeUpdate(
                     "insert into User_Ordencount(user) values(" + user.getIdLong() + ")");
-            removePokemonFromUser(getPokemonOfUser(user));
         } catch (SQLException e) {
             throw new TapirException("Could not set Orden for user " + user.getName() + " " + user.getIdLong(), e);
+        }
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate("delete from Pokemons where user=" + user.getIdLong());
+        } catch (SQLException e) {
+            throw new TapirException("Could not remove Pokemon for user " + user.getName() + " " + user.getIdLong(), e);
         }
     }
 
