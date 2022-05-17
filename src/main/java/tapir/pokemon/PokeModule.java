@@ -403,6 +403,7 @@ public class PokeModule extends ReceiveModule {
         final List<Pokemon> pokemonList = new ArrayList<>();
         StringBuilder builder = new StringBuilder("__*");
         String pokedexURL = "";
+        String ordenString = "";
         try {
             if (messages.length > 2 && messages[2].contains("<@") && messages[2].contains(">")) {
                 final long id = getUserIdFromMention(messages[2]);
@@ -411,11 +412,12 @@ public class PokeModule extends ReceiveModule {
                 Map<String, String> mentionedUser = getDbService().getUserInfoById(id);
                 builder.append(mentionedUser.get("name")).append("* hat");
                 pokedexURL = createPokedexPage(pokemonList, mentionedUser.get("name"));
-
+                ordenString = getOrdenString(id);
             } else {
                 pokemonList.addAll(getDbService().getPokemonOfUser(user));
                 builder.append(user.getName()).append("*, du hast");
                 pokedexURL = createPokedexPage(pokemonList, user.getName());
+                ordenString = getOrdenString(user.getIdLong());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -430,13 +432,12 @@ public class PokeModule extends ReceiveModule {
             builder.append(" schon **").append(size).append("** unterschiedliche");
         }
 
-        String ordenString = getOrdenString(user);
         builder.append(" Pokémon gefangen und ").append(ordenString).append(" Orden:__\n").append(pokedexURL);
         guildMessageReceivedEvent.getMessage().reply(builder.toString()).queue();
     }
 
-    private String getOrdenString(User user) {
-        int medalCount = getDbService().getOrdenCount(user);
+    private String getOrdenString(Long userId) {
+        int medalCount = getDbService().getOrdenCount(userId);
         String ordenString = "";
         if(medalCount > 0) {
             for (int i = 0; i < medalCount; i++) {

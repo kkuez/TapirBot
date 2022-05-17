@@ -313,18 +313,17 @@ public class DBService {
         }
     }
 
-    public int getOrdenCount(User user) {
+    public int getOrdenCount(Long userId) {
         int count = 0;
         try (Statement statement = getConnection().createStatement();
              ResultSet rs =
                      statement.executeQuery("select count(*) as count from User_Ordencount where user="
-                             + user.getIdLong())) {
+                             + userId)) {
             while (rs.next()) {
                 count = rs.getInt("count");
             }
         } catch (SQLException e) {
-            throw new TapirException("Could not get countof orden  for user " + user.getName() + " "
-                    + user.getIdLong(), e);
+            throw new TapirException("Could not get countof orden  for user " + userId, e);
         }
         return count;
     }
