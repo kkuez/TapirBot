@@ -304,6 +304,10 @@ public class PokeModule extends ReceiveModule {
                         user.openPrivateChannel().queue((privateChannel) ->
                                 privateChannel.sendMessage(pokemonBuilder).queue());
                         removeMessagesFromChannelIfWithCode(((PrivateMessageReceivedEvent) event.get()).getChannel());
+
+                        Pokemon finalGambledPokemon = gambledPokemon;
+                        getGeneralChannels().forEach(channel1 -> channel1.sendMessage(user.getName() + " hat ein "
+                        + finalGambledPokemon.getName() + "gewonnen! :)"));
                     } else {
                         StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig Pokemon gesetzt. " +
                                 "\nSetze mindestens 3 Stück!");
