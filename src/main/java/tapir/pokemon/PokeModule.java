@@ -307,7 +307,7 @@ public class PokeModule extends ReceiveModule {
 
                         Pokemon finalGambledPokemon = gambledPokemon;
                         getGeneralChannels().forEach(channel1 -> channel1.sendMessage(user.getName() + " hat ein "
-                        + finalGambledPokemon.getName() + "gewonnen! :)"));
+                        + finalGambledPokemon.getName() + "gewonnen! :)").queue());
                     } else {
                         StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig Pokemon gesetzt. " +
                                 "\nSetze mindestens 3 Stück!");
