@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
-import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import tapir.DBService;
@@ -195,7 +194,8 @@ public class PokeModule extends ReceiveModule {
                 "pokédex",
                 "swap",
                 "free",
-                "orden"
+                "orden",
+                "casino"
         );
     }
 
@@ -228,7 +228,13 @@ public class PokeModule extends ReceiveModule {
                 break;
             case "free":
                 if (messages.length == 2) {
-                    postGeneralFreeMessage(user);
+                    String listMessage = "Welches Pokemon willst du " +
+                            "freilassen?\nSchreibe mir die Codes mit !p free <CODE> (wenn du mehrere Pokemons freilassen " +
+                            "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!" +
+                            "\n:octagonal_sign: __Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
+                            " einzeln freilassen wollen, mache nach jedem Pokémon ein !p free um eine aktualisierte Codeliste" +
+                            " zu bekommen__ :octagonal_sign: ";
+                    postGeneralPokeListMessage(user, listMessage);
                 } else {
                     final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
                     final List<Pokemon> pokemonToDelete = Arrays.stream(messages[2].split(","))
@@ -247,29 +253,85 @@ public class PokeModule extends ReceiveModule {
                 }
                 break;
             case "orden":
-                if(messages.length == 2) {
+                if (messages.length == 2) {
                     checkForOrden(user);
                     return;
                 }
 
                 final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
-                if(messages.length != 4) {
+                if (messages.length != 4) {
                     return;
-                } else if(messages[3].equals("yes")) {
+                } else if (messages[3].equals("yes")) {
                     getDbService().registerNewOrden(user);
                     MessageBuilder messageBuilder = new MessageBuilder("Angenommen, herzlichen Glückwunsch zu deinem neuen Orden :)");
                     messageBuilder.setActionRows();
                     buttonClickEvent.editMessage(messageBuilder.build()).queue();
                     getGeneralChannels().forEach(channel1 -> channel1.sendMessage(":medal:" + user.getName()
                             + " hat einen nigelnagelneuen Orden!!!:medal:").queue());
-                } else if(messages[3].equals("no")) {
+                } else if (messages[3].equals("no")) {
                     MessageBuilder messageBuilder = new MessageBuilder("Nicht angenommen, du behälst deine Pokemon");
                     messageBuilder.append(" und bekommst keinen Orden.");
                     messageBuilder.setActionRows();
                     buttonClickEvent.editMessage(messageBuilder.build()).queue();
                 }
                 break;
+            case "casino":
+                if (messages.length == 2) {
+                    String listMessage = "Mit welchen Pokemon willst du " +
+                            "ins Casino?\nSchreibe mir die Codes mit !p casino <CODE> (du musst mindestens 3 " +
+                            "Pokemon setzen)" +
+                            "\nTrenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!";
+                    postGeneralPokeListMessage(user, listMessage);
+                } else {
+                    final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
+                    final List<Pokemon> pokemonToGamble = Arrays.stream(messages[2].split(","))
+                            .map(codeMap::get).collect(Collectors.toList());
+
+                    if(pokemonToGamble.size() > 2) {
+                        Pokemon gambledPokemon = null;
+                        try {
+                            gambledPokemon = getPokemon();
+                            getDbService().registerPokemon(user, gambledPokemon);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        getDbService().removePokemonFromUser(pokemonToGamble);
+
+                        StringBuilder pokemonBuilder = new StringBuilder("Herzlichen Glückwunsch! Du hast ein ");
+                        pokemonBuilder.append(gambledPokemon.getName()).append(" gewonnen! :)\n")
+                                .append(gambledPokemon.getPictureUrlString());
+
+                        user.openPrivateChannel().queue((privateChannel) ->
+                                privateChannel.sendMessage(pokemonBuilder).queue());
+                        removeMessagesFromChannelIfWithCode(((PrivateMessageReceivedEvent) event.get()).getChannel());
+                    } else {
+                        StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig Pokemon gesetzt. " +
+                                "\nSetze mindestens 3 Stück!");
+                        user.openPrivateChannel().queue((privateChannel) ->
+                                privateChannel.sendMessage(pokemonBuilder).queue());
+                    }
+                }
         }
+    }
+
+    private Pokemon gamble(List<Pokemon> pokemonToGamble) {
+        Pokemon gambledPokemon;
+        try {
+            switch (pokemonToGamble.size()) {
+                case 3:
+                    gambledPokemon = getPokemon();
+                    break;
+                case 4:
+
+                    break;
+                case 5:
+                    break;
+                default:
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private void checkForOrden(User user) {
@@ -349,16 +411,10 @@ public class PokeModule extends ReceiveModule {
         }
     }
 
-    private void postGeneralFreeMessage(User user) {
+    private void postGeneralPokeListMessage(User user, String listMesssage) {
         final List<Pokemon> pokemonOfUser = getDbService().getPokemonOfUser(user);
 
-        StringBuilder builder = new StringBuilder("Welches Pokemon willst du " +
-                "freilassen?\nSchreibe mir die Codes mit !p free <CODE> (wenn du mehrere Pokemons freilassen " +
-                "willst, dann trenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!");
-        builder.append("\n:octagonal_sign: __Es empfiehlt sich, mehrere Pokémon auf einmal freizulassen. Solltest du sie" +
-                " einzeln freilassen wollen, mache nach jedem Pokémon ein !p free um eine aktualisierte Codeliste" +
-                " zu bekommen__ :octagonal_sign: ");
-
+        StringBuilder builder = new StringBuilder(listMesssage);
         Map<String, Pokemon> codeMap = getCodeMap(pokemonOfUser);
         List<String> codeMapKeys = new ArrayList<>(codeMap.keySet());
         Collections.sort(codeMapKeys);
@@ -439,7 +495,7 @@ public class PokeModule extends ReceiveModule {
     private String getOrdenString(Long userId) {
         int medalCount = getDbService().getOrdenCount(userId);
         String ordenString = "";
-        if(medalCount > 0) {
+        if (medalCount > 0) {
             for (int i = 0; i < medalCount; i++) {
                 ordenString += ":medal:";
             }
