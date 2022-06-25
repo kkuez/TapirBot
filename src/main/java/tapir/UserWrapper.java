@@ -49,7 +49,7 @@ public class UserWrapper {
     if(!checkForLastInteraction()) {
         return;
     }
-        switch (split[0].toLowerCase()) {
+        switch (split[0].toLowerCase().replace("!", "")) {
             case "quiz":
                 if (!split[2].equals(event.getInteraction().getMember().getId())) {
                     final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
@@ -61,6 +61,7 @@ public class UserWrapper {
                 modules.get(QuizModule.class).handle(user, event.getButton().getId().split(" "), event.getTextChannel()
                         , Optional.of(event));
                 break;
+            case "p":
             case "poke":
                 modules.computeIfAbsent(PokeModule.class, pokeClass -> {
                     return pokeModule;

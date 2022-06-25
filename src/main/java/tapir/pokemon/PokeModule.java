@@ -277,45 +277,75 @@ public class PokeModule extends ReceiveModule {
                 break;
             case "casino":
                 if (messages.length == 2) {
-                    String listMessage = "Mit welchen Pokemon willst du " +
-                            "ins Casino?\nSchreibe mir die Codes mit !p casino <CODE> (du musst mindestens 3 " +
-                            "Pokemon setzen)" +
-                            "\nTrenne die Codes mit einem Komma, z. B. \"!p free ac,cx,de\")!";
-                    postGeneralPokeListMessage(user, listMessage);
+                    String listMessage = "Willst du drei überflüssige Pokémon im Pokécasino aufs Spiel setzen für ein" +
+                            " neues?";
+                    MessageBuilder messageBuilder = new MessageBuilder(listMessage);
+                    messageBuilder.setActionRows(ActionRow.of(Button.primary("!p casino yes", "Ja!"),
+                            Button.primary("!p casino no", "Lieber nicht")));
+                    user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(messageBuilder.build()).queue());
                 } else {
-                    final Map<String, Pokemon> codeMap = getCodeMap(getDbService().getPokemonOfUser(user));
-                    final List<Pokemon> pokemonToGamble = Arrays.stream(messages[2].split(","))
-                            .map(codeMap::get).collect(Collectors.toList());
+                    if (messages[2].equals("yes")) {
 
-                    if(pokemonToGamble.size() > 2) {
-                        Pokemon gambledPokemon = null;
-                        try {
-                            gambledPokemon = getPokemon();
-                            getDbService().registerPokemon(user, gambledPokemon);
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                        List<Pokemon> superfluousPokemon = getSuperfluousPokemonOfUser(user);
+                        if (superfluousPokemon.size() > 2) {
+                            Pokemon gambledPokemon = null;
+                            try {
+                                gambledPokemon = getPokemon();
+                                getDbService().registerPokemon(user, gambledPokemon);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            Collections.shuffle(superfluousPokemon);
+                            final List<Pokemon> pokemonsToRemove = superfluousPokemon.subList(0, 3);
+                            getDbService().removePokemonFromUser(pokemonsToRemove);
+
+                            StringBuilder pokemonBuilder = new StringBuilder("Herzlichen Glückwunsch! Du hast ein **");
+                            pokemonBuilder.append(gambledPokemon.getName()).append("** gewonnen! :)\n")
+                                    .append(gambledPokemon.getPictureUrlString());
+
+                            pokemonBuilder.append(" \nVerloren hast du dafür\n");
+                            pokemonsToRemove.forEach(pokemon -> pokemonBuilder.append(pokemon.getName())
+                                    .append(", Lvl ").append(pokemon.getLevel()).append("\n"));
+
+
+                            final ButtonClickEvent buttonToGambleEvent = (ButtonClickEvent) event.get();
+                            MessageBuilder messageBuilder = new MessageBuilder(pokemonBuilder.toString());
+                            messageBuilder.setActionRows();
+                            buttonToGambleEvent.editMessage(messageBuilder.build()).queue();
+
+
+                            Pokemon finalGambledPokemon = gambledPokemon;
+                            getGeneralChannels().forEach(channel1 -> channel1.sendMessage(user.getName() + " hat ein "
+                                    + finalGambledPokemon.getName() + " gewonnen! :)").queue());
+                        } else {
+                            StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig Pokemon gesetzt. " +
+                                    "\nDu hast weniger als 3 überflüssige Pokemon :/");
+                            user.openPrivateChannel().queue((privateChannel) ->
+                                    privateChannel.sendMessage(pokemonBuilder).queue());
                         }
-                        getDbService().removePokemonFromUser(pokemonToGamble);
-
-                        StringBuilder pokemonBuilder = new StringBuilder("Herzlichen Glückwunsch! Du hast ein ");
-                        pokemonBuilder.append(gambledPokemon.getName()).append(" gewonnen! :)\n")
-                                .append(gambledPokemon.getPictureUrlString());
-
-                        user.openPrivateChannel().queue((privateChannel) ->
-                                privateChannel.sendMessage(pokemonBuilder).queue());
-                        removeMessagesFromChannelIfWithCode(((PrivateMessageReceivedEvent) event.get()).getChannel());
-
-                        Pokemon finalGambledPokemon = gambledPokemon;
-                        getGeneralChannels().forEach(channel1 -> channel1.sendMessage(user.getName() + " hat ein "
-                        + finalGambledPokemon.getName() + "gewonnen! :)").queue());
                     } else {
-                        StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig Pokemon gesetzt. " +
-                                "\nSetze mindestens 3 Stück!");
-                        user.openPrivateChannel().queue((privateChannel) ->
-                                privateChannel.sendMessage(pokemonBuilder).queue());
+                        final ButtonClickEvent buttonToGambleEvent = (ButtonClickEvent) event.get();
+                        MessageBuilder messageBuilder = new MessageBuilder("Ok, dann halt nicht!");
+                        messageBuilder.setActionRows();
+                        buttonToGambleEvent.editMessage(messageBuilder.build()).queue();
                     }
                 }
         }
+    }
+
+    private List<Pokemon> getSuperfluousPokemonOfUser(User user) {
+        List<Pokemon> superfluous = new ArrayList<>();
+        final List<Pokemon> pokemonOfUser = getDbService().getPokemonOfUser(user);
+        final Set<String> pokemonBaseSet = new HashSet<>();
+        for (Pokemon pokemon : pokemonOfUser) {
+            if(pokemonBaseSet.contains(pokemon.getName())) {
+                superfluous.add(pokemon);
+            } else {
+                pokemonBaseSet.add(pokemon.getName());
+            }
+        }
+        return superfluous;
     }
 
     private Pokemon gamble(List<Pokemon> pokemonToGamble) {
