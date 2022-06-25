@@ -321,17 +321,21 @@ public class PokeModule extends ReceiveModule {
                         } else {
                             StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig Pokemon gesetzt. " +
                                     "\nDu hast weniger als 3 überflüssige Pokemon :/");
-                            user.openPrivateChannel().queue((privateChannel) ->
-                                    privateChannel.sendMessage(pokemonBuilder).queue());
+                            removeButtonMessage(event, pokemonBuilder.toString());
                         }
                     } else {
-                        final ButtonClickEvent buttonToGambleEvent = (ButtonClickEvent) event.get();
-                        MessageBuilder messageBuilder = new MessageBuilder("Ok, dann halt nicht!");
-                        messageBuilder.setActionRows();
-                        buttonToGambleEvent.editMessage(messageBuilder.build()).queue();
+                        final String message = "Ok, dann halt nicht!";
+                        removeButtonMessage(event, message);
                     }
                 }
         }
+    }
+
+    private void removeButtonMessage(Optional<Event> event, String message) {
+        final ButtonClickEvent buttonToGambleEvent = (ButtonClickEvent) event.get();
+        MessageBuilder messageBuilder = new MessageBuilder(message);
+        messageBuilder.setActionRows();
+        buttonToGambleEvent.editMessage(messageBuilder.build()).queue();
     }
 
     private List<Pokemon> getSuperfluousPokemonOfUser(User user) {
