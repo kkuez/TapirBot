@@ -71,7 +71,9 @@ public class UserWrapper {
         }
         // https://stackoverflow.com/questions/70386672/button-interaction-failed
         // Buttons always have to be acknowledged like this
-        event.deferEdit().queue();
+        if(!event.getInteraction().isAcknowledged()) {
+            event.deferEdit().queue();
+        }
     }
 
     public void handle(GuildMessageReceivedEvent event, DBService dbService, Set<TextChannel> allowedChannels,

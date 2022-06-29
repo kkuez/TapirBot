@@ -294,11 +294,14 @@ public class PokeModule extends ReceiveModule {
                 final String message = "Ok, dann halt nicht!";
                 removeButtonMessage(event, message);
             } else {
-                final int inputCount = Integer.parseInt(messages[2]);
+                final int buttonCount = Integer.parseInt(messages[2]);
                 List<Pokemon> superfluousPokemon = getSuperfluousPokemonOfUser(user);
 
-                if(superfluousPokemon.size() < inputCount) {
-                    StringBuilder pokemonBuilder = new StringBuilder("Du hast zu wenig überflüssige Pokémon dafür!");
+                final int superfluousCount = superfluousPokemon.size();
+                if(superfluousCount < buttonCount) {
+                    String countOutMessage =  superfluousCount == 0 ? "keine überflüssigen"
+                            : "nur " + superfluousCount + " überflüssige ";
+                    StringBuilder pokemonBuilder = new StringBuilder("Du hast " + countOutMessage + " Pokémon!");
                     removeButtonMessage(event, pokemonBuilder.toString());
                     return;
                 }
@@ -307,7 +310,7 @@ public class PokeModule extends ReceiveModule {
                 List<Pokemon> gambledPokemon = new ArrayList<>(3);
                 List<Pokemon> pokemonsToRemove = null;
                 try {
-                switch (inputCount) {
+                switch (buttonCount) {
                     case 3:
                         gambledPokemon.add(getPokemon());
                         pokemonsToRemove = superfluousPokemon.subList(0, 3);
@@ -348,7 +351,8 @@ public class PokeModule extends ReceiveModule {
                 List<Pokemon> finalGambledPokemon = gambledPokemon;
                 StringBuilder generalMessageStringBuilder = new StringBuilder("*" + user.getName() + "*");
                 generalMessageStringBuilder.append(" hat ");
-                finalGambledPokemon.forEach(pokemon -> generalMessageStringBuilder.append("\n**" + pokemon.getName()).append("** Lvl ").append(pokemon.getLevel()));
+                finalGambledPokemon.forEach(pokemon -> generalMessageStringBuilder.append("\n**" + pokemon.getName())
+                        .append("** Lvl ").append(pokemon.getLevel()));
                 generalMessageStringBuilder.append("\n gewonnen!");
                 getGeneralChannels().forEach(channel1 -> channel1.sendMessage(generalMessageStringBuilder.toString())
                         .queue());
@@ -375,26 +379,6 @@ public class PokeModule extends ReceiveModule {
             }
         }
         return superfluous;
-    }
-
-    private Pokemon gamble(List<Pokemon> pokemonToGamble) {
-        Pokemon gambledPokemon;
-        try {
-            switch (pokemonToGamble.size()) {
-                case 3:
-                    gambledPokemon = getPokemon();
-                    break;
-                case 4:
-
-                    break;
-                case 5:
-                    break;
-                default:
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;
     }
 
     private void checkForOrden(User user) {
