@@ -10,14 +10,11 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import tapir.DBService;
 import tapir.ReceiveModule;
 
 import java.io.*;
 import java.net.URL;
-import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -140,6 +137,14 @@ public class PokeModule extends ReceiveModule {
         }
     }
 
+    private List<Pokemon> getPokemon(int count) throws IOException {
+        List<Pokemon> pokemons = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            pokemons.add(getPokemon());
+        }
+        return pokemons;
+    }
+
     private Pokemon getPokemon() throws IOException {
         long index = 0;
         while (index == 0 || index == POKEMON_TOP_INDEX + 1) {
@@ -147,36 +152,12 @@ public class PokeModule extends ReceiveModule {
             index = Math.round(152 * random);
         }
 
-        JSONObject json;
-        try (InputStream is = new URL("https://pokeapi.co/api/v2/pokemon-species/" + index + "/").openStream()) {
-            BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
-            String jsonText = readAll(rd);
-            json = new JSONObject(jsonText);
-        }
-
-        String name = null;
-        final JSONArray genera = json.getJSONArray("names");
-        for (int i = 0; i < genera.length(); i++) {
-            final JSONObject jsonObject = genera.getJSONObject(i);
-            if (jsonObject.getJSONObject("language").getString("name").equals("de")) {
-                name = jsonObject.getString("name");
-                break;
-            }
-        }
+        String germanName = PokeAPIProvider.getNameForIndexAndLanguage(index, Optional.empty(), "de");
 
         final double levelDouble = Math.random() * 100;
         final long level = Math.round(levelDouble);
 
-        return new Pokemon(null, (int) index, name, (int) level);
-    }
-
-    private String readAll(Reader rd) throws IOException {
-        StringBuilder sb = new StringBuilder();
-        int cp;
-        while ((cp = rd.read()) != -1) {
-            sb.append((char) cp);
-        }
-        return sb.toString();
+        return new Pokemon(null, (int) index, germanName, (int) level);
     }
 
     @Override
@@ -195,6 +176,7 @@ public class PokeModule extends ReceiveModule {
                 "swap",
                 "free",
                 "orden",
+                "fight",
                 "casino"
         );
     }
@@ -277,16 +259,39 @@ public class PokeModule extends ReceiveModule {
                 break;
             case "casino":
                 processCasino(user, messages, event);
+                break;
+            case "fight":
+                processFight(event, messages, user);
+                break;
+        }
+    }
+
+    private void processFight(Optional<Event> event, String[] messages, User user) {
+        try {
+            PokeAPIProvider.getAttacksForPokemon(getDbService().getPokemonOfUser(user).get(0));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     private void processCasino(User user, String[] messages, Optional<Event> event) {
+        List<Pokemon> superfluousPokemon = getSuperfluousPokemonOfUser(user);
+        final int superfluousCount = superfluousPokemon.size();
+
+        if(superfluousCount < MAXCOUNT) {
+            String listMessage = "Du hast zu wenig überflüssige Pokémons fürs Casino!" +
+                    "\n(Du hast nur " + superfluousPokemon + " Stück!)";
+            MessageBuilder messageBuilder = new MessageBuilder(listMessage);
+            user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(messageBuilder.build()).queue());
+        }
+
         if (messages.length == 2) {
-            String listMessage = "Mit wievielen überflüssigen Pokémons willst du ins Casino?" +
+            String listMessage = "Mit wievielen überflüssigen Pokémons willst du ins Casino (Du hast " +
+                    superfluousCount + " zuviel)?" +
                     "\n*3* = Du gewinnst **ein** neues\n*4* = Du gewinnst **zwei** neue\n*5* = Du gewinnst **drei** neue";
             MessageBuilder messageBuilder = new MessageBuilder(listMessage);
             messageBuilder.setActionRows(ActionRow.of(Button.primary("!p casino 3", "3"),
-                    Button.primary("!p casino 4", "4"),Button.primary("!p casino 5", "5"),
+                    Button.primary("!p casino 4", "4"), Button.primary("!p casino 5", "5"),
                     Button.primary("!p casino no", "Lieber doch nicht")));
             user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(messageBuilder.build()).queue());
         } else {
@@ -295,11 +300,9 @@ public class PokeModule extends ReceiveModule {
                 removeButtonMessage(event, message);
             } else {
                 final int buttonCount = Integer.parseInt(messages[2]);
-                List<Pokemon> superfluousPokemon = getSuperfluousPokemonOfUser(user);
 
-                final int superfluousCount = superfluousPokemon.size();
-                if(superfluousCount < buttonCount) {
-                    String countOutMessage =  superfluousCount == 0 ? "keine überflüssigen"
+                if (superfluousCount < buttonCount) {
+                    String countOutMessage = superfluousCount == 0 ? "keine überflüssigen"
                             : "nur " + superfluousCount + " überflüssige ";
                     StringBuilder pokemonBuilder = new StringBuilder("Du hast " + countOutMessage + " Pokémon!");
                     removeButtonMessage(event, pokemonBuilder.toString());
@@ -307,26 +310,11 @@ public class PokeModule extends ReceiveModule {
                 }
 
                 Collections.shuffle(superfluousPokemon);
-                List<Pokemon> gambledPokemon = new ArrayList<>(3);
+                List<Pokemon> gambledPokemon = null;
                 List<Pokemon> pokemonsToRemove = null;
                 try {
-                switch (buttonCount) {
-                    case 3:
-                        gambledPokemon.add(getPokemon());
-                        pokemonsToRemove = superfluousPokemon.subList(0, 3);
-                        break;
-                    case 4:
-                        gambledPokemon.add(getPokemon());
-                        gambledPokemon.add(getPokemon());
-                        pokemonsToRemove = superfluousPokemon.subList(0, 4);
-                        break;
-                    case 5:
-                        gambledPokemon.add(getPokemon());
-                        gambledPokemon.add(getPokemon());
-                        gambledPokemon.add(getPokemon());
-                        pokemonsToRemove = superfluousPokemon.subList(0, 5);
-                        break;
-                }
+                    gambledPokemon = getPokemon(buttonCount);
+                    pokemonsToRemove = superfluousPokemon.subList(0, buttonCount);
                     getDbService().registerPokemon(user, gambledPokemon);
                     getDbService().removePokemonFromUser(pokemonsToRemove);
                 } catch (IOException e) {
@@ -335,9 +323,9 @@ public class PokeModule extends ReceiveModule {
 
 
                 StringBuilder pokemonBuilder = new StringBuilder("Herzlichen Glückwunsch! Du hast");
-                        gambledPokemon.forEach(pokemon -> {
-                            pokemonBuilder.append("\n**").append(pokemon.getName()).append("** Lvl ").append(pokemon.getLevel());
-                        });
+                gambledPokemon.forEach(pokemon -> {
+                    pokemonBuilder.append("\n**").append(pokemon.getName()).append("** Lvl ").append(pokemon.getLevel());
+                });
                 pokemonBuilder.append(" gewonnen! :)\n\nVerloren hast du dafür \n");
 
                 pokemonsToRemove.forEach(pokemon -> pokemonBuilder.append(pokemon.getName())
