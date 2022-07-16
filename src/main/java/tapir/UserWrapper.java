@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 
@@ -71,8 +70,10 @@ public class UserWrapper {
         }
         // https://stackoverflow.com/questions/70386672/button-interaction-failed
         // Buttons always have to be acknowledged like this
-        if(!event.getInteraction().isAcknowledged()) {
+        try{
             event.deferEdit().queue();
+        } catch (Exception exception) {
+            System.out.println(exception.getMessage());
         }
     }
 
@@ -132,7 +133,7 @@ public class UserWrapper {
     private boolean checkForLastInteraction() {
         boolean valid = true;
         final Long now = System.currentTimeMillis();
-        if((now - lastInteraction) < 300) {
+        if((now - lastInteraction) < 1000) {
             valid = false;
         }
         lastInteraction = now;

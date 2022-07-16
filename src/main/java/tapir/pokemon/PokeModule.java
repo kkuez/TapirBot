@@ -137,9 +137,9 @@ public class PokeModule extends ReceiveModule {
         }
     }
 
-    private List<Pokemon> getPokemon(int count) throws IOException {
-        List<Pokemon> pokemons = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
+    private List<Pokemon> getPokemon(int pressedCount) throws IOException {
+        List<Pokemon> pokemons = new ArrayList<>(pressedCount);
+        for (int i = 0; i < pressedCount - 2; i++) {
             pokemons.add(getPokemon());
         }
         return pokemons;
@@ -280,9 +280,10 @@ public class PokeModule extends ReceiveModule {
 
         if(superfluousCount < MAXCOUNT) {
             String listMessage = "Du hast zu wenig überflüssige Pokémons fürs Casino!" +
-                    "\n(Du hast nur " + superfluousPokemon + " Stück!)";
+                    "\n(Du hast nur " + superfluousCount + " Stück!)";
             MessageBuilder messageBuilder = new MessageBuilder(listMessage);
             user.openPrivateChannel().queue((channel1) -> channel1.sendMessage(messageBuilder.build()).queue());
+            return;
         }
 
         if (messages.length == 2) {
@@ -344,6 +345,8 @@ public class PokeModule extends ReceiveModule {
                 generalMessageStringBuilder.append("\n gewonnen!");
                 getGeneralChannels().forEach(channel1 -> channel1.sendMessage(generalMessageStringBuilder.toString())
                         .queue());
+                final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                buttonClickEvent.deferEdit().queue();
             }
         }
     }
