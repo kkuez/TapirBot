@@ -17,6 +17,7 @@ public class QuizQuestions implements Serializable {
     private String Wrong_Answer_1;
     private String Wrong_Answer_2;
     private String Wrong_Answer_3;
+    private String Explaination;
     private Long user;
 
     public Integer getId() {
@@ -73,5 +74,13 @@ public class QuizQuestions implements Serializable {
 
     public void setUser(Long user) {
         this.user = user;
+    }
+
+    public String getExplaination() {
+        return Explaination;
+    }
+
+    public void setExplaination(String explaination) {
+        Explaination = explaination;
     }
 }

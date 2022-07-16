@@ -6,6 +6,8 @@ import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
+import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.api.interactions.components.Component;
 import tapir.DBService;
@@ -27,6 +29,7 @@ public class QuizModule extends ReceiveModule {
     public static final String NO_CLUE = "Keine Ahnung!";
     public static final String QUIZ = "Quiz";
     public static final String MESSAGE_SEPERATOR = " ";
+    private String explaination;
 
     public QuizModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
         super(dbService, generalChannels, userNotAllowedToAsk);
@@ -75,7 +78,7 @@ public class QuizModule extends ReceiveModule {
                     final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
                     final String questionAfterTrim = buttonClickEvent.getMessage().getContentRaw()
                             .substring(0, buttonClickEvent.getMessage().getContentRaw().indexOf("\n*Antwort 1"));
-                    final String answerText = answerNr == 4 ? "Keine Ahnung!" :answers.get(answerNr).getText();
+                    final String answerText = answerNr == 4 ? "Keine Ahnung!" : answers.get(answerNr).getText();
 
                     final Message message = new MessageBuilder()
                             .append(questionAfterTrim).append("\n*").append(user.getName())
@@ -128,7 +131,7 @@ public class QuizModule extends ReceiveModule {
     }
 
     private void newQuestion(User user) {
-        if(getUserNotAllowedToAsk().contains(user.getIdLong())) {
+        if (getUserNotAllowedToAsk().contains(user.getIdLong())) {
             return;
         }
 
@@ -171,8 +174,10 @@ public class QuizModule extends ReceiveModule {
 
     @Override
     public boolean waitingForAnswer() {
-        return status.equals(QuizStatus.WAITING_ANSWER) || status.equals(QuizStatus.WAITING_QUESTION) ||
-                status.equals(QuizStatus.WAITING_QUESTION_ANSWERS);
+        return status.equals(QuizStatus.WAITING_ANSWER) ||
+                status.equals(QuizStatus.WAITING_QUESTION) ||
+                status.equals(QuizStatus.WAITING_QUESTION_ANSWERS) ||
+                status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION);
     }
 
     @Override
@@ -197,7 +202,8 @@ public class QuizModule extends ReceiveModule {
                 enterNewQuestionViaPM(message, channel);
                 break;
             case WAITING_QUESTION_ANSWERS:
-                enterAnswersViaPM(user, message, channel);
+            case WAITING_ANSWER_EXPLAINATION:
+                enterAnswersViaPM(user, message, channel, event);
                 break;
             default:
         }
@@ -210,8 +216,8 @@ public class QuizModule extends ReceiveModule {
         channel.sendMessage("Aktion abgebrochen!").queue();
     }
 
-    private void enterAnswersViaPM(User user, String input, PrivateChannel channel) {
-        for (int i = 0; i < 4; i++) {
+    private void enterAnswersViaPM(User user, String input, PrivateChannel channel, Optional<Event> event) {
+        for (int i = 0; i < 6; i++) {
             if (answers.size() == i) {
                 answers.add(new QuizAnswer(input, i == 0 ? RIGHT_ANSWER :
                         i == 1 ? WRONG_ANSWER_1 :
@@ -220,30 +226,49 @@ public class QuizModule extends ReceiveModule {
                 if (i == 0) {
                     channel.sendMessage("...und die erste falsche? (Abbrechen mit !abbruch hier via PM)").queue();
                     break;
-                } else {
-                    if (i == 1) {
-                        channel.sendMessage("...und die zweite falsche? (Abbrechen mit !abbruch hier via PM)").queue();
+                } else if (i == 1) {
+                    channel.sendMessage("...und die zweite falsche? (Abbrechen mit !abbruch hier via PM)").queue();
+                    break;
+                } else if (i == 2) {
+                    channel.sendMessage("...und die dritte falsche? (Abbrechen mit !abbruch hier via PM)").queue();
+                    break;
+                } else if (i == 3) {
+                    MessageBuilder messageBuilder = new MessageBuilder("Möchtest du der richtigen Antwort eine Erklärung anfügen?");
+                    messageBuilder.setActionRows(ActionRow.of(
+                            Button.primary("!quiz " + "yesButton " + user.getIdLong(), "Ja"),
+                            Button.primary("!quiz " + "noButton " + user.getIdLong(), "Nein")));
+                    channel.sendMessage(messageBuilder.build()).queue();
+                    break;
+                } else if (i == 4) {
+                    final ButtonClickEvent buttonClickEvent = (ButtonClickEvent) event.get();
+                    MessageBuilder messageBuilder = new MessageBuilder("Möchtest du der richtigen Antwort eine Erklärung anfügen?");
+                    buttonClickEvent.editMessage(messageBuilder.build()).queue();
+
+                    final String[] split = input.split(" ");
+                    if (split[1].startsWith("yes")) {
+                        status = QuizStatus.WAITING_ANSWER_EXPLAINATION;
+                        channel.sendMessage("Tippe bitte jetzt die Erklärung zur richtigen Antwort ein.").queue();
                         break;
-                    } else {
-                        if (i == 2) {
-                            channel.sendMessage("...und die dritte falsche? (Abbrechen mit !abbruch hier via PM)").queue();
-                            break;
-                        } else {
-                            channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
-                            getGeneralChannels().forEach(channel1 ->
-                                    channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
-                            getDbService().enterQuestion(user, question, answers);
-                            status = QuizStatus.NONE;
-                            break;
-                        }
                     }
+                } else if (i == 5) {
+                    if(status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {
+                        explaination = input;
+                    }
+
+                    channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
+                    getGeneralChannels().forEach(channel1 ->
+                            channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
+                    getDbService().enterQuestion(user, question, answers, explaination);
+                    status = QuizStatus.NONE;
+                    break;
                 }
             }
         }
     }
 
     private void enterNewQuestionViaPM(String input, PrivateChannel channel) {
-        question = new QuizQuestion(99, input, null, null);
+        question = new QuizQuestion(99, input, null, null, "");
+        explaination = "";
         channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
         status = QuizStatus.WAITING_QUESTION_ANSWERS;
     }
@@ -251,7 +276,7 @@ public class QuizModule extends ReceiveModule {
     private void info(MessageChannel channel, boolean global) {
         List<RankingTableEntry> userScores = getDbService().getUserScoresPointRated();
 
-        if(!global) {
+        if (!global) {
             filterMembers(channel, userScores);
         }
 
@@ -280,7 +305,7 @@ public class QuizModule extends ReceiveModule {
         userScores.sort(Comparator.comparing(rankingTableEntry -> rankingTableEntry.getRate()));
         Collections.reverse(userScores);
         for (RankingTableEntry entry : userScores) {
-            if(entry.getAnswered() < 10) {
+            if (entry.getAnswered() < 10) {
                 continue;
             }
             String rank = getRank(i);
@@ -303,7 +328,7 @@ public class QuizModule extends ReceiveModule {
             case 2:
                 return ":second_place:";
             case 3:
-                return  ":third_place:";
+                return ":third_place:";
             default:
                 return i + "";
         }
@@ -314,8 +339,8 @@ public class QuizModule extends ReceiveModule {
         final Set<Long> memberInChanIds = textChannel.getMembers().stream()
                 .map(member -> member.getIdLong()).collect(Collectors.toSet());
 
-        for(int i =0;i<userScores.size();i++) {
-            if(!memberInChanIds.contains(userScores.get(i).getUserId())) {
+        for (int i = 0; i < userScores.size(); i++) {
+            if (!memberInChanIds.contains(userScores.get(i).getUserId())) {
                 userScores.remove(i);
                 //lower i cuz list shrinks of 1 element
                 i--;
@@ -327,24 +352,35 @@ public class QuizModule extends ReceiveModule {
         int rightAnswerIndex = getRightAnswerIndex();
         String answerOfUser = NO_CLUE;
 
-        final String sendToUser;
+        final StringBuilder sendToUser = new StringBuilder();
         if (answerNr == rightAnswerIndex) {
             //send right
-            sendToUser = "Yessa " + user.getName() + "! Das war richtig, +3 Punkte für dich!";
+            sendToUser.append("Yessa ").append(user.getName()).append("! Das war richtig, +3 Punkte für dich!");
+
+            if(question.getExplaination() != null && !question.getExplaination().equals("")) {
+                    sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
+                        .append(question.getExplaination()).append("\"");
+            }
+
             answerOfUser = RIGHT_ANSWER;
         } else {
             if (answerNr == 4) {
                 // send mid
-                sendToUser = "Hm ok... Nix gewonnen, nix verloren.";
+                sendToUser.append("Hm ok... Nix gewonnen, nix verloren.");
             } else {
                 //send wrong
-                sendToUser = "Autsch " + user.getName() + " :( Leider falsch, -2 Punkte!\n Die richtige Antwort ist: " +
-                        answers.get(rightAnswerIndex).getText();
+                sendToUser.append("Autsch ").append(user.getName()).append(" :( Leider falsch, -2 Punkte!\n ")
+                        .append("Die richtige Antwort ist: ").append(answers.get(rightAnswerIndex).getText());
+
+                if(question.getExplaination() != null && !question.getExplaination().equals("")) {
+                    sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
+                            .append(question.getExplaination()).append("\"");
+                }
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
 
-        user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser).queue());
+        user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser.toString()).queue());
         getDbService().sendAnswer(user.getIdLong(), question.getId(), answerOfUser);
         status = QuizStatus.NONE;
     }
@@ -379,7 +415,7 @@ public class QuizModule extends ReceiveModule {
             questionBuilder.append("*Antwort 5:*\t** ").append(NO_CLUE).append("**").append("\n");
 
             final String buttonIdBeginn = QUIZ + MESSAGE_SEPERATOR + "answer"
-                    + MESSAGE_SEPERATOR+ user.getId() + MESSAGE_SEPERATOR;
+                    + MESSAGE_SEPERATOR + user.getId() + MESSAGE_SEPERATOR;
             event.getMessage().reply(questionBuilder.toString())
                     .setActionRow(
                             Button.primary(buttonIdBeginn + 0, "Antwort 1"),

@@ -87,7 +87,8 @@ public class DBService {
                         rs.getInt("id"),
                         rs.getString("text"),
                         answers,
-                        rs.getString("name")
+                        rs.getString("name"),
+                        rs.getString("Explaination")
                 );
                 questions.add(question);
             }
@@ -146,7 +147,7 @@ public class DBService {
         return rankingTable;
     }
 
-    public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers) {
+    public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers, String explaination) {
 
         final QuizQuestions quizQuestionEntity = new QuizQuestions();
         quizQuestionEntity.setText(question.getText());
@@ -154,13 +155,13 @@ public class DBService {
         quizQuestionEntity.setWrong_Answer_1(answers.get(1).getText());
         quizQuestionEntity.setWrong_Answer_2(answers.get(2).getText());
         quizQuestionEntity.setWrong_Answer_3(answers.get(3).getText());
+        quizQuestionEntity.setExplaination(explaination);
         quizQuestionEntity.setUser(user.getIdLong());
 
         final EntityManager em = emf.createEntityManager();
         em.getTransaction().begin();
         em.persist(quizQuestionEntity);
         em.getTransaction().commit();
-
     }
 
     private String mangleChars(String input) {
@@ -185,7 +186,8 @@ public class DBService {
                         rs.getInt("id"),
                         rs.getString("text"),
                         answers,
-                        rs.getString("user")
+                        rs.getString("user"),
+                        rs.getString("Explaination")
                 );
                 questions.add(question);
             }

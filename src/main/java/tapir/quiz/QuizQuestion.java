@@ -5,15 +5,17 @@ import java.util.List;
 public class QuizQuestion {
 
     private final String creatorName;
+    private String explaination;
     private int id;
     private String text;
     private List<QuizAnswer> answers;
 
-    public QuizQuestion(int id, String text, List<QuizAnswer> answers, String creatorName) {
+    public QuizQuestion(int id, String text, List<QuizAnswer> answers, String creatorName, String explaination) {
         this.id = id;
         this.text = text;
         this.answers = answers;
         this.creatorName = creatorName;
+        this.explaination = explaination;
     }
 
     public String getCreatorName() {
@@ -30,5 +32,9 @@ public class QuizQuestion {
 
     public List<QuizAnswer> getAnswers() {
         return answers;
+    }
+
+    public String getExplaination() {
+        return explaination;
     }
 }

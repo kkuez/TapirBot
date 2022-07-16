@@ -1,6 +1,7 @@
 package tapir;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.PrivateChannel;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
@@ -9,6 +10,7 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import tapir.pokemon.PokeModule;
 import tapir.quiz.QuizModule;
 
+import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -44,22 +46,28 @@ public class UserWrapper {
         return user;
     }
 
-    public void handleButton(ButtonClickEvent event, String[] split) {
+    public void handleButton(ButtonClickEvent event, String inputWhole) {
     if(!checkForLastInteraction()) {
         return;
     }
+        final String[] split = inputWhole.split(QuizModule.MESSAGE_SEPERATOR + "");
         switch (split[0].toLowerCase().replace("!", "")) {
             case "quiz":
-                if (!split[2].equals(event.getInteraction().getMember().getId())) {
+                if (!split[2].equals(event.getInteraction().getUser().getId())) {
                     final String userNamePressedButton = event.getInteraction().getMember().getUser().getName();
                     event.getChannel().sendMessage("Sorry " + userNamePressedButton + ", das ist" +
                             " nicht dein Button!!! :o").queue();
                     return;
                 }
 
-                modules.get(QuizModule.class).handle(user, event.getButton().getId().split(" "), event.getTextChannel()
-                        , Optional.of(event));
-                break;
+                if(event.getChannel() instanceof PrivateChannel) {
+                    modules.get(QuizModule.class).handlePM(user, inputWhole, event.getJDA(),
+                            (PrivateChannel) event.getChannel(), Optional.of(event));
+                } else {
+                    modules.get(QuizModule.class).handle(user, event.getButton().getId().split(" "), event.getChannel(),
+                            Optional.of(event));
+                    break;
+                }
             case "p":
             case "poke":
                 modules.computeIfAbsent(PokeModule.class, pokeClass -> {

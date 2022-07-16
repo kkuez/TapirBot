@@ -73,8 +73,8 @@ public abstract class TapirListener extends ListenerAdapter {
 
         String buttonId = doButtonStringValidityCheck(event);
         //TODO Ab hbier mal refactorn
-        final String[] split = buttonId.split(QuizModule.MESSAGE_SEPERATOR + "");
-        userWrapper.handleButton(event, split);
+
+        userWrapper.handleButton(event, buttonId);
     }
 
     /**
