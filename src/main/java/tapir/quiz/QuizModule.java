@@ -10,17 +10,15 @@ import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
-import net.dv8tion.jda.api.interactions.components.Component;
 import tapir.DBService;
 import tapir.ReceiveModule;
 
-import javax.swing.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
@@ -36,6 +34,7 @@ public class QuizModule extends ReceiveModule {
     public static final String NO_CLUE = "Keine Ahnung!";
     public static final String QUIZ = "Quiz";
     public static final String MESSAGE_SEPERATOR = " ";
+    public static final Pattern HTTP_PICTURE_PATTERN = Pattern.compile("(http|https)://.*(png|bmp|tiff|jpg|jpeg)");
     private String explaination;
 
     public QuizModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
@@ -278,7 +277,7 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-    private void enterNewQuestionViaPM(String input, PrivateChannel channel, Optional<Event> event) {
+    private void enterNewQuestionViaPM(String description, PrivateChannel channel, Optional<Event> event) {
         final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
         final List<Attachment> attachments = privateMessageReceivedEvent.getMessage().getAttachments();
         final List<String> attachmentsFileNames = new ArrayList<>(attachments.size());
@@ -289,11 +288,32 @@ public class QuizModule extends ReceiveModule {
             attachment.downloadToFile(new File(attachmentsFolder, attachmentFileName));
             attachmentsFileNames.add(attachmentFileName);
         }
-
-        question = new QuizQuestion(99, input, null, null, "", attachmentsFileNames);
+        description = findAndAddAttachmentViaHttpLinks(description, attachmentsFileNames);
+        question = new QuizQuestion(99, description, null, null, "", attachmentsFileNames);
         explaination = "";
         channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
         status = QuizStatus.WAITING_QUESTION_ANSWERS;
+    }
+
+    private String findAndAddAttachmentViaHttpLinks(String description, List<String> attachmentsFileNames) {
+        final Matcher matcher = HTTP_PICTURE_PATTERN.matcher(description);
+        while(matcher.find()) {
+            final String linkToPicture = matcher.group();
+            String fileNameStored = UUID.randomUUID() + linkToPicture.substring(linkToPicture.lastIndexOf("."));
+            final File file = new File(getAttachmentsFolder(), fileNameStored);
+            try(final BufferedInputStream bis = new BufferedInputStream(new URL(linkToPicture).openStream());
+                final FileOutputStream fos = new FileOutputStream(file)) {
+                bis.transferTo(fos);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            description = description.replace(linkToPicture, "");
+            attachmentsFileNames.add(fileNameStored);
+        }
+
+        return description;
     }
 
     private File getAttachmentsFolder() {
