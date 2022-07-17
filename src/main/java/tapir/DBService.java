@@ -345,4 +345,31 @@ public class DBService {
         }
         return count;
     }
+
+    public QuizQuestions refreshQuestionAttachments(QuizQuestion question, String newDescription,
+                                                    List<String> attachmentFileNames) {
+        StringBuilder attachmentsStringBuilder = new StringBuilder();
+        attachmentFileNames.forEach(fileName -> attachmentsStringBuilder.append(fileName).append(";"));
+        final QuizQuestions questionEntity = getQuestionById(question.getId());
+        questionEntity.setText(newDescription);
+        questionEntity.setQuestionFileNames(attachmentsStringBuilder.toString());
+        final EntityManager em = emf.createEntityManager();
+        em.getTransaction().begin();
+        em.merge(questionEntity);
+        em.getTransaction().commit();
+
+        return questionEntity;
+    }
+
+
+    private QuizQuestions getQuestionById(int id, EntityManager em) {
+        final QuizQuestions quizQuestionEntity = em.find(QuizQuestions.class, id);
+        return quizQuestionEntity;
+    }
+
+    public QuizQuestions getQuestionById(int id) {
+        final EntityManager em = emf.createEntityManager();
+        final QuizQuestions questionById = getQuestionById(id, em);
+        return questionById;
+    }
 }

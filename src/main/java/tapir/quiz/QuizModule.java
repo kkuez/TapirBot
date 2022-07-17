@@ -1,5 +1,6 @@
 package tapir.quiz;
 
+import entities.QuizQuestions;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
@@ -257,11 +258,11 @@ public class QuizModule extends ReceiveModule {
                         break;
                     }
                 } else if (i == 5) {
-                    if(status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {
+                    if (status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {
                         explaination = input;
                     }
                     StringBuilder messageBuilder = new StringBuilder("Danke, das gibt einen Punkt für dich :)");
-                    if(!question.getAttachmentsFileNames().isEmpty() && question.getAttachmentsFileNames().size() > 1) {
+                    if (!question.getAttachmentsFileNames().isEmpty() && question.getAttachmentsFileNames().size() > 1) {
                         messageBuilder.append("\nHinweis: Es werden zwar alle Bilder gespeichert, derzeit wird aber ")
                                 .append("nur das erste dem Fragenden angezeigt!");
                     }
@@ -288,25 +289,30 @@ public class QuizModule extends ReceiveModule {
             attachment.downloadToFile(new File(attachmentsFolder, attachmentFileName));
             attachmentsFileNames.add(attachmentFileName);
         }
-        description = findAndAddAttachmentViaHttpLinks(description, attachmentsFileNames);
-        question = new QuizQuestion(99, description, null, null, "", attachmentsFileNames);
-        explaination = "";
-        channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
-        status = QuizStatus.WAITING_QUESTION_ANSWERS;
+        try {
+            description = findAndReplaceAndAddAttachmentViaHttpLinks(description, attachmentsFileNames);
+
+            question = new QuizQuestion(99, description, null, null, "", attachmentsFileNames);
+            explaination = "";
+            channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
+            status = QuizStatus.WAITING_QUESTION_ANSWERS;
+        } catch (IOException e) {
+            e.printStackTrace();
+            channel.sendMessage("Sorry, es konnte kein Bild mit dem Link gefunden werden, ist der wirklich richtig?")
+                    .queue();
+        }
     }
 
-    private String findAndAddAttachmentViaHttpLinks(String description, List<String> attachmentsFileNames) {
+    private String findAndReplaceAndAddAttachmentViaHttpLinks(String description, List<String> attachmentsFileNames) throws IOException {
         final Matcher matcher = HTTP_PICTURE_PATTERN.matcher(description);
-        while(matcher.find()) {
+        while (matcher.find()) {
             final String linkToPicture = matcher.group();
             String fileNameStored = UUID.randomUUID() + linkToPicture.substring(linkToPicture.lastIndexOf("."));
             final File file = new File(getAttachmentsFolder(), fileNameStored);
-            try(final BufferedInputStream bis = new BufferedInputStream(new URL(linkToPicture).openStream());
-                final FileOutputStream fos = new FileOutputStream(file)) {
+            try (final BufferedInputStream bis = new BufferedInputStream(new URL(linkToPicture).openStream());
+                 final FileOutputStream fos = new FileOutputStream(file)) {
                 bis.transferTo(fos);
             } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
                 e.printStackTrace();
             }
             description = description.replace(linkToPicture, "");
@@ -318,7 +324,7 @@ public class QuizModule extends ReceiveModule {
 
     private File getAttachmentsFolder() {
         File attachmentsFolder = new File(".", "QuestionAttachments");
-        if(attachmentsFolder.exists() && attachmentsFolder.isDirectory()) {
+        if (attachmentsFolder.exists() && attachmentsFolder.isDirectory()) {
             return attachmentsFolder;
         }
 
@@ -410,8 +416,8 @@ public class QuizModule extends ReceiveModule {
             //send right
             sendToUser.append("Yessa ").append(user.getName()).append("! Das war richtig, +3 Punkte für dich!");
 
-            if(question.getExplaination() != null && !question.getExplaination().equals("")) {
-                    sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
+            if (question.getExplaination() != null && !question.getExplaination().equals("")) {
+                sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
                         .append(question.getExplaination()).append("\"");
             }
 
@@ -425,7 +431,7 @@ public class QuizModule extends ReceiveModule {
                 sendToUser.append("Autsch ").append(user.getName()).append(" :( Leider falsch, -2 Punkte!\n ")
                         .append("Die richtige Antwort ist: ").append(answers.get(rightAnswerIndex).getText());
 
-                if(question.getExplaination() != null && !question.getExplaination().equals("")) {
+                if (question.getExplaination() != null && !question.getExplaination().equals("")) {
                     sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
                             .append(question.getExplaination()).append("\"");
                 }
@@ -452,38 +458,62 @@ public class QuizModule extends ReceiveModule {
         List<QuizQuestion> questionsForUser = getDbService().getFilteredQuestionsForUser(user);
         if (!questionsForUser.isEmpty()) {
             Collections.shuffle(questionsForUser);
+            //TODO Either use the entity or a quesiton object!!!!!
             question = questionsForUser.get(0);
+
+            QuizQuestions questionEntity = getDbService().getQuestionById(question.getId());
             List<QuizAnswer> answers = question.getAnswers();
             Collections.shuffle(answers);
             this.answers = answers;
 
-            MessageBuilder questionBuilder = new MessageBuilder();
-            questionBuilder.append(user.getName()).append(", deine Frage von **").append(question.getCreatorName())
-                    .append("**:\n ");
-            questionBuilder.append("**").append(question.getText()).append("**\n");
-            questionBuilder.append("*Antwort 1:*\t** ").append(answers.get(0).getText()).append("**").append("\n");
-            questionBuilder.append("*Antwort 2:*\t** ").append(answers.get(1).getText()).append("**").append("\n");
-            questionBuilder.append("*Antwort 3:*\t** ").append(answers.get(2).getText()).append("**").append("\n");
-            questionBuilder.append("*Antwort 4:*\t** ").append(answers.get(3).getText()).append("**").append("\n");
+            // To replace pictures in questions with old links in http. Those should be refreshed here
+            List<String> attachmentFileNames = new ArrayList<>(question.getAttachmentsFileNames());
+            final int sizeBefore = attachmentFileNames.size();
+            final String newDescription;
+            try {
+                newDescription = findAndReplaceAndAddAttachmentViaHttpLinks(question.getText(), attachmentFileNames);
+                if (sizeBefore != attachmentFileNames.size()) {
+                    questionEntity = getDbService().refreshQuestionAttachments(question, newDescription, attachmentFileNames);
+                }
 
-            final String buttonIdBeginn = QUIZ + MESSAGE_SEPERATOR + "answer"
-                    + MESSAGE_SEPERATOR + user.getId() + MESSAGE_SEPERATOR;
-            questionBuilder.setActionRows(ActionRow.of(
-                    Button.primary(buttonIdBeginn + 0, "Antwort 1"),
-                    Button.primary(buttonIdBeginn + 1, "Antwort 2"),
-                    Button.primary(buttonIdBeginn + 2, "Antwort 3"),
-                    Button.primary(buttonIdBeginn + 3, "Antwort 4"),
-                    Button.primary(buttonIdBeginn + 4, "Keine Ahnung!")));
-            final boolean hasAttachment = !question.getAttachmentsFileNames().isEmpty();
-            if(hasAttachment) {
-                final String attachmentFileNameFirst = question.getAttachmentsFileNames().get(0);
-                event.getMessage().reply(questionBuilder.build())
-                        .addFile(new File(getAttachmentsFolder(), attachmentFileNameFirst)).queue();
-            } else {
-                event.getMessage().reply(questionBuilder.build()).queue();
+                MessageBuilder questionBuilder = new MessageBuilder();
+                final String userName = getDbService().getUserInfoById(questionEntity.getUser()).get("name");
+                questionBuilder.append(user.getName()).append(", deine Frage von **").append(userName)
+                        .append("**:\n ");
+                questionBuilder.append("**").append(questionEntity.getText()).append("**\n");
+                questionBuilder.append("*Antwort 1:*\t** ").append(answers.get(0).getText()).append("**").append("\n");
+                questionBuilder.append("*Antwort 2:*\t** ").append(answers.get(1).getText()).append("**").append("\n");
+                questionBuilder.append("*Antwort 3:*\t** ").append(answers.get(2).getText()).append("**").append("\n");
+                questionBuilder.append("*Antwort 4:*\t** ").append(answers.get(3).getText()).append("**").append("\n");
+
+                final String buttonIdBeginn = QUIZ + MESSAGE_SEPERATOR + "answer"
+                        + MESSAGE_SEPERATOR + user.getId() + MESSAGE_SEPERATOR;
+                questionBuilder.setActionRows(ActionRow.of(
+                        Button.primary(buttonIdBeginn + 0, "Antwort 1"),
+                        Button.primary(buttonIdBeginn + 1, "Antwort 2"),
+                        Button.primary(buttonIdBeginn + 2, "Antwort 3"),
+                        Button.primary(buttonIdBeginn + 3, "Antwort 4"),
+                        Button.primary(buttonIdBeginn + 4, "Keine Ahnung!")));
+                final boolean hasAttachment = !questionEntity.getQuestionFileNames().isEmpty();
+                if (hasAttachment) {
+                    String questionFileNames = questionEntity.getQuestionFileNames();
+                    questionFileNames = questionFileNames.startsWith(";") ? questionFileNames.replaceFirst(";", "") : questionFileNames;
+                    final String attachmentFileNameFirst = questionFileNames.split(";")[0].replace(";", "");
+                    final File attachmentFile = new File(getAttachmentsFolder(), attachmentFileNameFirst);
+                    event.getMessage().reply(questionBuilder.build()).addFile(attachmentFile).queue();
+                } else {
+                    event.getMessage().reply(questionBuilder.build()).queue();
+                }
+
+                this.status = QuizStatus.WAITING_ANSWER;
+            } catch (IOException e) {
+                e.printStackTrace();
+                event.getChannel().sendMessage("Sorry, in der Frage gibt es noch einen alten Link zu einem Bild, das " +
+                        "nicht mehr gefunden werden kann. Ich stelle die Frage erstmal zurück. Sag @kkuez Bescheid!")
+                        .queue();
+                System.out.println("Kaputte Frage: " + question.getText());
             }
 
-            this.status = QuizStatus.WAITING_ANSWER;
         } else {
             event.getChannel().sendMessage("Sorry " + user.getName()
                     + ", Du hast schon alle Fragen beantwortet. Warte bis es neue gibt ;)").queue();
