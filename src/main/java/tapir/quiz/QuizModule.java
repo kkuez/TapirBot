@@ -3,6 +3,7 @@ package tapir.quiz;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
+import net.dv8tion.jda.api.entities.Message.Attachment;
 import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
@@ -13,7 +14,13 @@ import net.dv8tion.jda.api.interactions.components.Component;
 import tapir.DBService;
 import tapir.ReceiveModule;
 
+import javax.swing.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 
@@ -199,7 +206,7 @@ public class QuizModule extends ReceiveModule {
 
         switch (status) {
             case WAITING_QUESTION:
-                enterNewQuestionViaPM(message, channel);
+                enterNewQuestionViaPM(message, channel, event);
                 break;
             case WAITING_QUESTION_ANSWERS:
             case WAITING_ANSWER_EXPLAINATION:
@@ -254,8 +261,13 @@ public class QuizModule extends ReceiveModule {
                     if(status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {
                         explaination = input;
                     }
+                    StringBuilder messageBuilder = new StringBuilder("Danke, das gibt einen Punkt für dich :)");
+                    if(!question.getAttachmentsFileNames().isEmpty() && question.getAttachmentsFileNames().size() > 1) {
+                        messageBuilder.append("\nHinweis: Es werden zwar alle Bilder gespeichert, derzeit wird aber ")
+                                .append("nur das erste dem Fragenden angezeigt!");
+                    }
 
-                    channel.sendMessage("Danke, das gibt einen Punkt für dich :)").queue();
+                    channel.sendMessage(messageBuilder).queue();
                     getGeneralChannels().forEach(channel1 ->
                             channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
                     getDbService().enterQuestion(user, question, answers, explaination);
@@ -266,11 +278,32 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-    private void enterNewQuestionViaPM(String input, PrivateChannel channel) {
-        question = new QuizQuestion(99, input, null, null, "");
+    private void enterNewQuestionViaPM(String input, PrivateChannel channel, Optional<Event> event) {
+        final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
+        final List<Attachment> attachments = privateMessageReceivedEvent.getMessage().getAttachments();
+        final List<String> attachmentsFileNames = new ArrayList<>(attachments.size());
+        File attachmentsFolder = getAttachmentsFolder();
+        for (Attachment attachment : attachments) {
+            final UUID uuid = UUID.randomUUID();
+            final String attachmentFileName = uuid + "." + attachment.getFileExtension();
+            attachment.downloadToFile(new File(attachmentsFolder, attachmentFileName));
+            attachmentsFileNames.add(attachmentFileName);
+        }
+
+        question = new QuizQuestion(99, input, null, null, "", attachmentsFileNames);
         explaination = "";
         channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
         status = QuizStatus.WAITING_QUESTION_ANSWERS;
+    }
+
+    private File getAttachmentsFolder() {
+        File attachmentsFolder = new File(".", "QuestionAttachments");
+        if(attachmentsFolder.exists() && attachmentsFolder.isDirectory()) {
+            return attachmentsFolder;
+        }
+
+        attachmentsFolder.mkdir();
+        return attachmentsFolder;
     }
 
     private void info(MessageChannel channel, boolean global) {
@@ -404,7 +437,7 @@ public class QuizModule extends ReceiveModule {
             Collections.shuffle(answers);
             this.answers = answers;
 
-            StringBuilder questionBuilder = new StringBuilder();
+            MessageBuilder questionBuilder = new MessageBuilder();
             questionBuilder.append(user.getName()).append(", deine Frage von **").append(question.getCreatorName())
                     .append("**:\n ");
             questionBuilder.append("**").append(question.getText()).append("**\n");
@@ -412,18 +445,23 @@ public class QuizModule extends ReceiveModule {
             questionBuilder.append("*Antwort 2:*\t** ").append(answers.get(1).getText()).append("**").append("\n");
             questionBuilder.append("*Antwort 3:*\t** ").append(answers.get(2).getText()).append("**").append("\n");
             questionBuilder.append("*Antwort 4:*\t** ").append(answers.get(3).getText()).append("**").append("\n");
-            questionBuilder.append("*Antwort 5:*\t** ").append(NO_CLUE).append("**").append("\n");
 
             final String buttonIdBeginn = QUIZ + MESSAGE_SEPERATOR + "answer"
                     + MESSAGE_SEPERATOR + user.getId() + MESSAGE_SEPERATOR;
-            event.getMessage().reply(questionBuilder.toString())
-                    .setActionRow(
-                            Button.primary(buttonIdBeginn + 0, "Antwort 1"),
-                            Button.primary(buttonIdBeginn + 1, "Antwort 2"),
-                            Button.primary(buttonIdBeginn + 2, "Antwort 3"),
-                            Button.primary(buttonIdBeginn + 3, "Antwort 4"),
-                            Button.primary(buttonIdBeginn + 4, "Keine Ahnung!"))
-                    .queue();
+            questionBuilder.setActionRows(ActionRow.of(
+                    Button.primary(buttonIdBeginn + 0, "Antwort 1"),
+                    Button.primary(buttonIdBeginn + 1, "Antwort 2"),
+                    Button.primary(buttonIdBeginn + 2, "Antwort 3"),
+                    Button.primary(buttonIdBeginn + 3, "Antwort 4"),
+                    Button.primary(buttonIdBeginn + 4, "Keine Ahnung!")));
+            final boolean hasAttachment = !question.getAttachmentsFileNames().isEmpty();
+            if(hasAttachment) {
+                final String attachmentFileNameFirst = question.getAttachmentsFileNames().get(0);
+                event.getMessage().reply(questionBuilder.build())
+                        .addFile(new File(getAttachmentsFolder(), attachmentFileNameFirst)).queue();
+            } else {
+                event.getMessage().reply(questionBuilder.build()).queue();
+            }
 
             this.status = QuizStatus.WAITING_ANSWER;
         } else {

@@ -11,10 +11,12 @@ import tapir.quiz.QuizQuestion;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.persistence.*;
 
 public class DBService {
 
+    private static final String ATTACHMENT_FILENAME_SEPERATOR = ";";
     private final String dbPath;
     EntityManagerFactory emf;
 
@@ -82,14 +84,19 @@ public class DBService {
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_1), QuizModule.WRONG_ANSWER_1));
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
+                final String attachmentFileNamesString = rs.getString("QuestionFileNames");
+                final String attachmentFileNamesStringForList =
+                        attachmentFileNamesString == null ? "" : attachmentFileNamesString;
+                final List<String> attachmentFileNames = Arrays.stream(attachmentFileNamesStringForList
+                        .split(ATTACHMENT_FILENAME_SEPERATOR)).collect(Collectors.toList());
 
                 QuizQuestion question = new QuizQuestion(
                         rs.getInt("id"),
                         rs.getString("text"),
                         answers,
                         rs.getString("name"),
-                        rs.getString("Explaination")
-                );
+                        rs.getString("Explaination"),
+                        attachmentFileNames);
                 questions.add(question);
             }
         } catch (SQLException e) {
@@ -148,6 +155,9 @@ public class DBService {
     }
 
     public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers, String explaination) {
+        StringBuilder questionFileNamesBuilder = new StringBuilder();
+        question.getAttachmentsFileNames().forEach(filename -> questionFileNamesBuilder.append(filename)
+                .append(ATTACHMENT_FILENAME_SEPERATOR));
 
         final QuizQuestions quizQuestionEntity = new QuizQuestions();
         quizQuestionEntity.setText(question.getText());
@@ -156,6 +166,7 @@ public class DBService {
         quizQuestionEntity.setWrong_Answer_2(answers.get(2).getText());
         quizQuestionEntity.setWrong_Answer_3(answers.get(3).getText());
         quizQuestionEntity.setExplaination(explaination);
+        quizQuestionEntity.setQuestionFileNames(questionFileNamesBuilder.toString());
         quizQuestionEntity.setUser(user.getIdLong());
 
         final EntityManager em = emf.createEntityManager();
@@ -182,13 +193,18 @@ public class DBService {
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
 
+                final String attachmentFileNamesString = rs.getString("attachmentFileNames");
+                final String attachmentFileNamesStringForList =
+                        attachmentFileNamesString == null ? "" : attachmentFileNamesString;
+                final List<String> attachmentFileNames = Arrays.stream(attachmentFileNamesStringForList
+                        .split(ATTACHMENT_FILENAME_SEPERATOR)).collect(Collectors.toList());
                 QuizQuestion question = new QuizQuestion(
                         rs.getInt("id"),
                         rs.getString("text"),
                         answers,
                         rs.getString("user"),
-                        rs.getString("Explaination")
-                );
+                        rs.getString("Explaination"),
+                        attachmentFileNames);
                 questions.add(question);
             }
         } catch (SQLException e) {
