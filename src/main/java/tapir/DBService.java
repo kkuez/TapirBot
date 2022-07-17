@@ -1,6 +1,6 @@
 package tapir;
 
-import entities.QuizQuestions;
+import entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.entities.User;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
@@ -159,7 +159,7 @@ public class DBService {
         question.getAttachmentsFileNames().forEach(filename -> questionFileNamesBuilder.append(filename)
                 .append(ATTACHMENT_FILENAME_SEPERATOR));
 
-        final QuizQuestions quizQuestionEntity = new QuizQuestions();
+        final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
         quizQuestionEntity.setText(question.getText());
         quizQuestionEntity.setRight_Answer(answers.get(0).getText());
         quizQuestionEntity.setWrong_Answer_1(answers.get(1).getText());
@@ -182,30 +182,26 @@ public class DBService {
     /**
      * Gets questions which where created by the user
      */
-    public List<QuizQuestion> getQuestionsCreatedByUser(long userId) {
-        List<QuizQuestion> questions = new ArrayList<>();
+    public List<QuizQuestionEntity> getQuestionsCreatedByUser(long userId) {
+        List<QuizQuestionEntity> questions = new ArrayList<>();
         try (Statement statement = getConnection().createStatement();
              ResultSet rs = statement.executeQuery("Select * from QuizQuestions where user=" + userId)) {
             while (rs.next()) {
-                List<QuizAnswer> answers = new ArrayList<>(4);
-                answers.add(new QuizAnswer(rs.getString(QuizModule.RIGHT_ANSWER), QuizModule.RIGHT_ANSWER));
-                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_1), QuizModule.WRONG_ANSWER_1));
-                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
-                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
-
                 final String attachmentFileNamesString = rs.getString("QuestionFileNames");
                 final String attachmentFileNamesStringForList =
                         attachmentFileNamesString == null ? "" : attachmentFileNamesString;
-                final List<String> attachmentFileNames = Arrays.stream(attachmentFileNamesStringForList
-                        .split(ATTACHMENT_FILENAME_SEPERATOR)).collect(Collectors.toList());
-                QuizQuestion question = new QuizQuestion(
-                        rs.getInt("id"),
-                        rs.getString("text"),
-                        answers,
-                        rs.getString("user"),
-                        rs.getString("Explaination"),
-                        attachmentFileNames);
-                questions.add(question);
+                final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
+                quizQuestionEntity.setId(rs.getInt("id"));
+                quizQuestionEntity.setUser(rs.getLong("user"));
+                quizQuestionEntity.setText(rs.getString("text"));
+                quizQuestionEntity.setRight_Answer(rs.getString(QuizModule.RIGHT_ANSWER));
+                quizQuestionEntity.setWrong_Answer_1(rs.getString(QuizModule.WRONG_ANSWER_1));
+                quizQuestionEntity.setWrong_Answer_2(rs.getString(QuizModule.WRONG_ANSWER_2));
+                quizQuestionEntity.setWrong_Answer_3(rs.getString(QuizModule.WRONG_ANSWER_3));
+                quizQuestionEntity.setExplaination(rs.getString("Explaination"));
+                quizQuestionEntity.setQuestionFileNames(attachmentFileNamesStringForList);
+
+                questions.add(quizQuestionEntity);
             }
         } catch (SQLException e) {
             throw new TapirException("Could not get questions of user " + userId, e);
@@ -346,11 +342,11 @@ public class DBService {
         return count;
     }
 
-    public QuizQuestions refreshQuestionAttachments(QuizQuestion question, String newDescription,
-                                                    List<String> attachmentFileNames) {
+    public QuizQuestionEntity refreshQuestionAttachments(QuizQuestion question, String newDescription,
+                                                         List<String> attachmentFileNames) {
         StringBuilder attachmentsStringBuilder = new StringBuilder();
         attachmentFileNames.forEach(fileName -> attachmentsStringBuilder.append(fileName).append(";"));
-        final QuizQuestions questionEntity = getQuestionById(question.getId());
+        final QuizQuestionEntity questionEntity = getQuestionById(question.getId());
         questionEntity.setText(newDescription);
         questionEntity.setQuestionFileNames(attachmentsStringBuilder.toString());
         final EntityManager em = emf.createEntityManager();
@@ -362,8 +358,8 @@ public class DBService {
     }
 
 
-    private QuizQuestions getQuestionById(int id, EntityManager em) {
-        final QuizQuestions quizQuestionEntity = em.find(QuizQuestions.class, id);
+    private QuizQuestionEntity getQuestionById(int id, EntityManager em) {
+        final QuizQuestionEntity quizQuestionEntity = em.find(QuizQuestionEntity.class, id);
         if(quizQuestionEntity.getQuestionFileNames() == null) {
             //TODO sofort wieder ind ie DB geben dann
             quizQuestionEntity.setQuestionFileNames("");
@@ -371,9 +367,9 @@ public class DBService {
         return quizQuestionEntity;
     }
 
-    public QuizQuestions getQuestionById(int id) {
+    public QuizQuestionEntity getQuestionById(int id) {
         final EntityManager em = emf.createEntityManager();
-        final QuizQuestions questionById = getQuestionById(id, em);
+        final QuizQuestionEntity questionById = getQuestionById(id, em);
         return questionById;
     }
 }

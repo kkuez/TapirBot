@@ -1,6 +1,6 @@
 package tapir.quiz;
 
-import entities.QuizQuestions;
+import entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
@@ -461,7 +461,7 @@ public class QuizModule extends ReceiveModule {
             //TODO Either use the entity or a quesiton object!!!!!
             question = questionsForUser.get(0);
 
-            QuizQuestions questionEntity = getDbService().getQuestionById(question.getId());
+            QuizQuestionEntity questionEntity = getDbService().getQuestionById(question.getId());
             List<QuizAnswer> answers = question.getAnswers();
             Collections.shuffle(answers);
             this.answers = answers;

@@ -40,3 +40,8 @@ CREATE TABLE "User_Ordencount" (
 	"user"	NUMERIC,
 	FOREIGN KEY("user") REFERENCES "User.id"
 );
+CREATE TABLE "Question_Attachment" (
+"question" NUMERIC,
+"uuid" TEXT,
+"category" TEXT
+)
