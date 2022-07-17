@@ -193,7 +193,7 @@ public class DBService {
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
                 answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
 
-                final String attachmentFileNamesString = rs.getString("attachmentFileNames");
+                final String attachmentFileNamesString = rs.getString("QuestionFileNames");
                 final String attachmentFileNamesStringForList =
                         attachmentFileNamesString == null ? "" : attachmentFileNamesString;
                 final List<String> attachmentFileNames = Arrays.stream(attachmentFileNamesStringForList
