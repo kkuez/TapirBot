@@ -364,6 +364,10 @@ public class DBService {
 
     private QuizQuestions getQuestionById(int id, EntityManager em) {
         final QuizQuestions quizQuestionEntity = em.find(QuizQuestions.class, id);
+        if(quizQuestionEntity.getQuestionFileNames() == null) {
+            //TODO sofort wieder ind ie DB geben dann
+            quizQuestionEntity.setQuestionFileNames("");
+        }
         return quizQuestionEntity;
     }
 
