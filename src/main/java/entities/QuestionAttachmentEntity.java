@@ -13,6 +13,7 @@ public class QuestionAttachmentEntity implements Serializable {
     @Nullable
     private int question;
 
+    @Id
     @Column(name="filename")
     @Nullable
     private String filename;
@@ -45,6 +46,5 @@ public class QuestionAttachmentEntity implements Serializable {
     public void setCategory(String category) {
         this.category = category;
     }
-
 
 }

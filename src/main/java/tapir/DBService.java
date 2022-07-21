@@ -189,10 +189,10 @@ public class DBService {
         }
         final EntityManager emAttachments = emf.createEntityManager();
         try {
+            question.getAttachments().forEach(a->a.setQuestion(quizQuestionEntity.getId()));
             emAttachments.getTransaction().begin();
             for (QuestionAttachmentEntity questionAttachmentEntity : question.getAttachments()) {
-                questionAttachmentEntity.setQuestion(quizQuestionEntity.getId());
-                emAttachments.merge(questionAttachmentEntity);
+                emAttachments.persist(questionAttachmentEntity);
             }
             emAttachments.getTransaction().commit();
         } finally {
@@ -381,7 +381,7 @@ public class DBService {
         return questionById;
     }
 
-    public QuizQuestionEntity addQuestionAttachments(List<QuestionAttachmentEntity> attachments) {
+    public void addQuestionAttachments(List<QuestionAttachmentEntity> attachments) {
         final EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
@@ -391,6 +391,16 @@ public class DBService {
         } finally {
             em.close();
         }
-        return null;
+    }
+
+    public void updateQuestionEntity(QuizQuestionEntity questionEntity) {
+        final EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+            em.merge(questionEntity);
+            em.getTransaction().commit();
+        } finally {
+            em.close();
+        }
     }
 }

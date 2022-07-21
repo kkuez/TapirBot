@@ -259,6 +259,17 @@ public class QuizModule extends ReceiveModule {
                         break;
                     }
                 } else if (i == 5) {
+                    final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
+                    try {
+                        final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
+                                findAndReplaceAndGetAttachmentOfHttpLinks(privateMessageReceivedEvent.getMessage().getContentRaw(), Optional.empty());
+                        questionAttachmentsAndDescriptionWrapper.getAttachments()
+                                .forEach(ea -> ea.setCategory(AttachmentCategory.EXPLAINATION.toString()));
+                        explaination = questionAttachmentsAndDescriptionWrapper.getDescription();
+                        question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     getDbService().enterQuestion(user, question, answers, explaination);
                     if (status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {
                         explaination = input;
@@ -293,9 +304,10 @@ public class QuizModule extends ReceiveModule {
         }
 
         try {
-            final List<QuestionAttachmentEntity> newAttachments =
-                    findAndReplaceAndAddAttachmentViaHttpLinksAndGetAttachments(description, Optional.empty());
-            question = new QuizQuestion(99, description, null, null, "", newAttachments);
+            final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
+                    findAndReplaceAndGetAttachmentOfHttpLinks(description, Optional.empty());
+            question = new QuizQuestion(99, questionAttachmentsAndDescriptionWrapper.getDescription(), null, null, "",
+                    questionAttachmentsAndDescriptionWrapper.getAttachments());
 
             channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
             status = QuizStatus.WAITING_QUESTION_ANSWERS;
@@ -306,7 +318,7 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-    private List<QuestionAttachmentEntity> findAndReplaceAndAddAttachmentViaHttpLinksAndGetAttachments(String description, Optional<Integer> questionIdOpt)
+    private QuestionAttachmentsAndDescriptionWrapper findAndReplaceAndGetAttachmentOfHttpLinks(String description, Optional<Integer> questionIdOpt)
             throws IOException {
         List<QuestionAttachmentEntity> attachments = new ArrayList<>(0);
         final Matcher matcher = HTTP_PICTURE_PATTERN.matcher(description);
@@ -331,7 +343,7 @@ public class QuizModule extends ReceiveModule {
             attachments.add(questionAttachmentEntity);
         }
 
-        return attachments;
+        return new QuestionAttachmentsAndDescriptionWrapper(description, attachments);
     }
 
     private File getAttachmentsFolder() {
@@ -423,13 +435,13 @@ public class QuizModule extends ReceiveModule {
         int rightAnswerIndex = getRightAnswerIndex();
         String answerOfUser = NO_CLUE;
 
-        final StringBuilder sendToUser = new StringBuilder();
+        final MessageBuilder sendToUserBuilder = new MessageBuilder();
         if (answerNr == rightAnswerIndex) {
             //send right
-            sendToUser.append("Yessa ").append(user.getName()).append("! Das war richtig, +3 Punkte für dich!");
+            sendToUserBuilder.append("Yessa ").append(user.getName()).append("! Das war richtig, +3 Punkte für dich!");
 
             if (question.getExplaination() != null && !question.getExplaination().equals("")) {
-                sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
+                sendToUserBuilder.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
                         .append(question.getExplaination()).append("\"");
             }
 
@@ -437,22 +449,34 @@ public class QuizModule extends ReceiveModule {
         } else {
             if (answerNr == 4) {
                 // send mid
-                sendToUser.append("Hm ok... Nix gewonnen, nix verloren.");
+                sendToUserBuilder.append("Hm ok... Nix gewonnen, nix verloren.");
             } else {
                 //send wrong
-                sendToUser.append("Autsch ").append(user.getName()).append(" :( Leider falsch, -2 Punkte!\n ")
+                sendToUserBuilder.append("Autsch ").append(user.getName()).append(" :( Leider falsch, -2 Punkte!\n ")
                         .append("Die richtige Antwort ist: ").append(answers.get(rightAnswerIndex).getText());
 
                 if (question.getExplaination() != null && !question.getExplaination().equals("")) {
-                    sendToUser.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
+                    sendToUserBuilder.append("\nAls Erklärung schrieb ").append(question.getCreatorName()).append(":\n\"")
                             .append(question.getExplaination()).append("\"");
                 }
                 answerOfUser = answers.get(answerNr).getColumn();
             }
         }
 
-        user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUser.toString()).queue());
         getDbService().sendAnswer(user.getIdLong(), question.getId(), answerOfUser);
+
+        final List<QuestionAttachmentEntity> explainationAttachments =
+                question.getAttachments().stream()
+                        .filter(attachment -> attachment.getCategory().equals(AttachmentCategory.EXPLAINATION))
+                        .collect(Collectors.toList());
+        if(explainationAttachments.isEmpty()) {
+            user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.toString()).queue());
+        } else {
+            final String attachmentFileName = explainationAttachments.get(0).getFilename();
+            final File attachmentFile = new File(getAttachmentsFolder(), attachmentFileName);
+            user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.toString())
+                    .addFile(attachmentFile).queue());
+        }
         status = QuizStatus.NONE;
     }
 
@@ -477,15 +501,18 @@ public class QuizModule extends ReceiveModule {
             List<QuizAnswer> answers = question.getAnswers();
             Collections.shuffle(answers);
             this.answers = answers;
-
+            final List<QuestionAttachmentEntity> questionAttachments = getDbService().getQuestionAttachments(question.getId());
+            question.getAttachments().addAll(questionAttachments);
             // To replace pictures in questions with old links in http. Those should be refreshed here
             //List<String> attachmentFileNames = new ArrayList<>(question.getAttachments());
             try {
-                final List<QuestionAttachmentEntity> newAttachments =
-                        findAndReplaceAndAddAttachmentViaHttpLinksAndGetAttachments(question.getText(), Optional.of(question.getId()));
-                question.getAttachments().addAll(newAttachments);
-                if (!newAttachments.isEmpty()) {
-                    questionEntity = getDbService().addQuestionAttachments(newAttachments);
+                final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
+                        findAndReplaceAndGetAttachmentOfHttpLinks(question.getText(), Optional.of(question.getId()));
+                question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
+                if (!questionAttachmentsAndDescriptionWrapper.getAttachments().isEmpty()) {
+                    getDbService().addQuestionAttachments(questionAttachmentsAndDescriptionWrapper.getAttachments());
+                    questionEntity.setText(questionAttachmentsAndDescriptionWrapper.getDescription());
+                    getDbService().updateQuestionEntity(questionEntity);
                 }
 
                 MessageBuilder questionBuilder = new MessageBuilder();
@@ -572,6 +599,25 @@ public class QuizModule extends ReceiveModule {
 
         public Long getUserId() {
             return userId;
+        }
+    }
+
+    //Just a helper class to get back description AND all attachments in #findAndReplaceAndGetAttachmentOfHttpLinks
+    private class QuestionAttachmentsAndDescriptionWrapper {
+        private String description;
+        private List<QuestionAttachmentEntity> attachment;
+
+        public QuestionAttachmentsAndDescriptionWrapper(String description, List<QuestionAttachmentEntity> attachment) {
+            this.description = description;
+            this.attachment = attachment;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public List<QuestionAttachmentEntity> getAttachments() {
+            return attachment;
         }
     }
 }
