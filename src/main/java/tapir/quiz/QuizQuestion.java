@@ -1,5 +1,7 @@
 package tapir.quiz;
 
+import entities.QuestionAttachmentEntity;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -7,19 +9,19 @@ public class QuizQuestion {
 
     private final String creatorName;
     private String explaination;
-    private List<String> attachmentsFileNames = new ArrayList<>();
+    private List<QuestionAttachmentEntity> attachments = new ArrayList<>();
     private int id;
     private String text;
     private List<QuizAnswer> answers;
 
     public QuizQuestion(int id, String text, List<QuizAnswer> answers, String creatorName, String explaination,
-                        List<String> attachmentsFileNames) {
+                        List<QuestionAttachmentEntity> attachments) {
         this.id = id;
         this.text = text;
         this.answers = answers;
         this.creatorName = creatorName;
         this.explaination = explaination;
-        this.attachmentsFileNames = attachmentsFileNames;
+        this.attachments = attachments;
     }
 
     public String getCreatorName() {
@@ -42,7 +44,9 @@ public class QuizQuestion {
         return explaination;
     }
 
-    public List<String> getAttachmentsFileNames() {
-        return attachmentsFileNames;
+    public List<QuestionAttachmentEntity> getAttachments() {
+        return attachments;
     }
+
+
 }

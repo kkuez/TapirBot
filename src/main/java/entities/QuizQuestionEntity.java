@@ -3,6 +3,7 @@ package entities;
 import javax.annotation.Nullable;
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.List;
 
 @Entity
 @Table(name = "QuizQuestions")
@@ -18,7 +19,6 @@ public class QuizQuestionEntity implements Serializable {
     private String Wrong_Answer_2;
     private String Wrong_Answer_3;
     private String Explaination;
-    private String QuestionFileNames;
     private Long user;
 
     public Integer getId() {
@@ -83,13 +83,5 @@ public class QuizQuestionEntity implements Serializable {
 
     public void setExplaination(String explaination) {
         Explaination = explaination;
-    }
-
-    public String getQuestionFileNames() {
-        return QuestionFileNames;
-    }
-
-    public void setQuestionFileNames(String questionFileNames) {
-        QuestionFileNames = questionFileNames;
     }
 }

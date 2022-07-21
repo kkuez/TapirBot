@@ -1,5 +1,6 @@
 package tapir;
 
+import entities.QuestionAttachmentEntity;
 import entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.entities.User;
 import tapir.exception.TapirException;
@@ -11,7 +12,6 @@ import tapir.quiz.QuizQuestion;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
-import java.util.stream.Collectors;
 import javax.persistence.*;
 
 public class DBService {
@@ -87,22 +87,36 @@ public class DBService {
                 final String attachmentFileNamesString = rs.getString("QuestionFileNames");
                 final String attachmentFileNamesStringForList =
                         attachmentFileNamesString == null ? "" : attachmentFileNamesString;
-                final List<String> attachmentFileNames = Arrays.stream(attachmentFileNamesStringForList
-                        .split(ATTACHMENT_FILENAME_SEPERATOR)).collect(Collectors.toList());
 
+                final int questionId = rs.getInt("id");
+                List<QuestionAttachmentEntity> attachments = getQuestionAttachments(questionId);
                 QuizQuestion question = new QuizQuestion(
-                        rs.getInt("id"),
+                        questionId,
                         rs.getString("text"),
                         answers,
                         rs.getString("name"),
                         rs.getString("Explaination"),
-                        attachmentFileNames);
+                        attachments);
                 questions.add(question);
             }
         } catch (SQLException e) {
             throw new TapirException("Could not get questions for user " + user.getIdLong(), e);
         }
         return questions;
+    }
+
+    public List<QuestionAttachmentEntity> getQuestionAttachments(int questionId) {
+        final EntityManager em = emf.createEntityManager();
+        final List<QuestionAttachmentEntity> resultList;
+        try{
+            // Instead of table name, one has to select from the java class name
+            // https://stackoverflow.com/questions/9954590/hibernate-error-querysyntaxexception-users-is-not-mapped-from-users
+            resultList = em.createQuery("FROM QuestionAttachmentEntity where question=" + questionId,
+                    QuestionAttachmentEntity.class).getResultList();
+        } finally {
+            em.close();
+        }
+            return resultList;
     }
 
     private long getUserId(User user) {
@@ -155,9 +169,6 @@ public class DBService {
     }
 
     public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers, String explaination) {
-        StringBuilder questionFileNamesBuilder = new StringBuilder();
-        question.getAttachmentsFileNames().forEach(filename -> questionFileNamesBuilder.append(filename)
-                .append(ATTACHMENT_FILENAME_SEPERATOR));
 
         final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
         quizQuestionEntity.setText(question.getText());
@@ -166,13 +177,28 @@ public class DBService {
         quizQuestionEntity.setWrong_Answer_2(answers.get(2).getText());
         quizQuestionEntity.setWrong_Answer_3(answers.get(3).getText());
         quizQuestionEntity.setExplaination(explaination);
-        quizQuestionEntity.setQuestionFileNames(questionFileNamesBuilder.toString());
         quizQuestionEntity.setUser(user.getIdLong());
 
         final EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
-        em.persist(quizQuestionEntity);
-        em.getTransaction().commit();
+        try {
+            em.getTransaction().begin();
+            em.persist(quizQuestionEntity);
+            em.getTransaction().commit();
+        } finally {
+            em.close();
+        }
+        final EntityManager emAttachments = emf.createEntityManager();
+        try {
+            emAttachments.getTransaction().begin();
+            for (QuestionAttachmentEntity questionAttachmentEntity : question.getAttachments()) {
+                questionAttachmentEntity.setQuestion(quizQuestionEntity.getId());
+                emAttachments.merge(questionAttachmentEntity);
+            }
+            emAttachments.getTransaction().commit();
+        } finally {
+            emAttachments.close();
+        }
+        System.out.println();
     }
 
     private String mangleChars(String input) {
@@ -187,11 +213,11 @@ public class DBService {
         try (Statement statement = getConnection().createStatement();
              ResultSet rs = statement.executeQuery("Select * from QuizQuestions where user=" + userId)) {
             while (rs.next()) {
-                final String attachmentFileNamesString = rs.getString("QuestionFileNames");
-                final String attachmentFileNamesStringForList =
-                        attachmentFileNamesString == null ? "" : attachmentFileNamesString;
                 final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
-                quizQuestionEntity.setId(rs.getInt("id"));
+                final int questionId = rs.getInt("id");
+                final List<QuestionAttachmentEntity> questionAttachments = getQuestionAttachments(questionId);
+
+                quizQuestionEntity.setId(questionId);
                 quizQuestionEntity.setUser(rs.getLong("user"));
                 quizQuestionEntity.setText(rs.getString("text"));
                 quizQuestionEntity.setRight_Answer(rs.getString(QuizModule.RIGHT_ANSWER));
@@ -199,8 +225,6 @@ public class DBService {
                 quizQuestionEntity.setWrong_Answer_2(rs.getString(QuizModule.WRONG_ANSWER_2));
                 quizQuestionEntity.setWrong_Answer_3(rs.getString(QuizModule.WRONG_ANSWER_3));
                 quizQuestionEntity.setExplaination(rs.getString("Explaination"));
-                quizQuestionEntity.setQuestionFileNames(attachmentFileNamesStringForList);
-
                 questions.add(quizQuestionEntity);
             }
         } catch (SQLException e) {
@@ -266,7 +290,7 @@ public class DBService {
             }
 
             final int[] rows = preparedStatement.executeBatch();
-            if(rows.length != pokemonList.size()) {
+            if (rows.length != pokemonList.size()) {
                 throw new RuntimeException("Not all pokemons inserted!");
             }
         } catch (SQLException throwables) {
@@ -304,7 +328,7 @@ public class DBService {
                 preparedStatement.addBatch();
             }
             final int[] rows = preparedStatement.executeBatch();
-            if(rows.length != pokemonToRemove.size()) {
+            if (rows.length != pokemonToRemove.size()) {
                 throw new RuntimeException("Not all pokemons removed!");
             }
         } catch (SQLException e) {
@@ -342,34 +366,31 @@ public class DBService {
         return count;
     }
 
-    public QuizQuestionEntity refreshQuestionAttachments(QuizQuestion question, String newDescription,
-                                                         List<String> attachmentFileNames) {
-        StringBuilder attachmentsStringBuilder = new StringBuilder();
-        attachmentFileNames.forEach(fileName -> attachmentsStringBuilder.append(fileName).append(";"));
-        final QuizQuestionEntity questionEntity = getQuestionById(question.getId());
-        questionEntity.setText(newDescription);
-        questionEntity.setQuestionFileNames(attachmentsStringBuilder.toString());
-        final EntityManager em = emf.createEntityManager();
-        em.getTransaction().begin();
-        em.merge(questionEntity);
-        em.getTransaction().commit();
-
-        return questionEntity;
-    }
-
-
     private QuizQuestionEntity getQuestionById(int id, EntityManager em) {
-        final QuizQuestionEntity quizQuestionEntity = em.find(QuizQuestionEntity.class, id);
-        if(quizQuestionEntity.getQuestionFileNames() == null) {
-            //TODO sofort wieder ind ie DB geben dann
-            quizQuestionEntity.setQuestionFileNames("");
-        }
-        return quizQuestionEntity;
+        return em.find(QuizQuestionEntity.class, id);
     }
 
     public QuizQuestionEntity getQuestionById(int id) {
         final EntityManager em = emf.createEntityManager();
-        final QuizQuestionEntity questionById = getQuestionById(id, em);
+        final QuizQuestionEntity questionById;
+        try {
+            questionById = getQuestionById(id, em);
+        } finally {
+            em.close();
+        }
         return questionById;
+    }
+
+    public QuizQuestionEntity addQuestionAttachments(List<QuestionAttachmentEntity> attachments) {
+        final EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+            attachments.forEach(questionAttachmentEntity -> questionAttachmentEntity.setQuestion(999999));
+            attachments.forEach(em::merge);
+            em.getTransaction().commit();
+        } finally {
+            em.close();
+        }
+        return null;
     }
 }

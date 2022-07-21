@@ -10,7 +10,6 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import tapir.pokemon.PokeModule;
 import tapir.quiz.QuizModule;
 
-import javax.swing.text.html.Option;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -76,6 +75,7 @@ public class UserWrapper {
                         event.getButton().getId().split(" "), event.getChannel(), Optional.of(event));
                 break;
         }
+
         // https://stackoverflow.com/questions/70386672/button-interaction-failed
         // Buttons always have to be acknowledged like this
         try{

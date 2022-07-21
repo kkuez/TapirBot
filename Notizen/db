@@ -5,7 +5,6 @@ CREATE TABLE "QuizQuestions" (
 	"Wrong_Answer_1"	TEXT,
 	"Wrong_Answer_2"	TEXT,
 	"Wrong_Answer_3"	TEXT,
-	"QuestionFileNames"	TEXT,
 	"user"	NUMERIC,
 	PRIMARY KEY("id"),
 	FOREIGN KEY("user") REFERENCES "User.id"
@@ -41,7 +40,8 @@ CREATE TABLE "User_Ordencount" (
 	FOREIGN KEY("user") REFERENCES "User.id"
 );
 CREATE TABLE "Question_Attachment" (
-"question" NUMERIC,
-"uuid" TEXT,
-"category" TEXT
+"question" INTEGER,
+"filename" TEXT,
+"category" TEXT,
+PRIMARY KEY("question", "filename")
 )

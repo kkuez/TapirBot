@@ -1,5 +1,6 @@
 package tapir.quiz;
 
+import entities.QuestionAttachmentEntity;
 import entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
@@ -258,11 +259,12 @@ public class QuizModule extends ReceiveModule {
                         break;
                     }
                 } else if (i == 5) {
+                    getDbService().enterQuestion(user, question, answers, explaination);
                     if (status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {
                         explaination = input;
                     }
                     StringBuilder messageBuilder = new StringBuilder("Danke, das gibt einen Punkt für dich :)");
-                    if (!question.getAttachmentsFileNames().isEmpty() && question.getAttachmentsFileNames().size() > 1) {
+                    if (!question.getAttachments().isEmpty() && question.getAttachments().size() > 1) {
                         messageBuilder.append("\nHinweis: Es werden zwar alle Bilder gespeichert, derzeit wird aber ")
                                 .append("nur das erste dem Fragenden angezeigt!");
                     }
@@ -270,7 +272,6 @@ public class QuizModule extends ReceiveModule {
                     channel.sendMessage(messageBuilder).queue();
                     getGeneralChannels().forEach(channel1 ->
                             channel1.sendMessage(user.getName() + " hat eine neue Frage erstellt!").queue());
-                    getDbService().enterQuestion(user, question, answers, explaination);
                     status = QuizStatus.NONE;
                     break;
                 }
@@ -283,17 +284,19 @@ public class QuizModule extends ReceiveModule {
         final List<Attachment> attachments = privateMessageReceivedEvent.getMessage().getAttachments();
         final List<String> attachmentsFileNames = new ArrayList<>(attachments.size());
         File attachmentsFolder = getAttachmentsFolder();
+
         for (Attachment attachment : attachments) {
             final UUID uuid = UUID.randomUUID();
             final String attachmentFileName = uuid + "." + attachment.getFileExtension();
             attachment.downloadToFile(new File(attachmentsFolder, attachmentFileName));
             attachmentsFileNames.add(attachmentFileName);
         }
-        try {
-            description = findAndReplaceAndAddAttachmentViaHttpLinks(description, attachmentsFileNames);
 
-            question = new QuizQuestion(99, description, null, null, "", attachmentsFileNames);
-            explaination = "";
+        try {
+            final List<QuestionAttachmentEntity> newAttachments =
+                    findAndReplaceAndAddAttachmentViaHttpLinksAndGetAttachments(description, Optional.empty());
+            question = new QuizQuestion(99, description, null, null, "", newAttachments);
+
             channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
             status = QuizStatus.WAITING_QUESTION_ANSWERS;
         } catch (IOException e) {
@@ -303,7 +306,9 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-    private String findAndReplaceAndAddAttachmentViaHttpLinks(String description, List<String> attachmentsFileNames) throws IOException {
+    private List<QuestionAttachmentEntity> findAndReplaceAndAddAttachmentViaHttpLinksAndGetAttachments(String description, Optional<Integer> questionIdOpt)
+            throws IOException {
+        List<QuestionAttachmentEntity> attachments = new ArrayList<>(0);
         final Matcher matcher = HTTP_PICTURE_PATTERN.matcher(description);
         while (matcher.find()) {
             final String linkToPicture = matcher.group();
@@ -316,10 +321,17 @@ public class QuizModule extends ReceiveModule {
                 e.printStackTrace();
             }
             description = description.replace(linkToPicture, "");
-            attachmentsFileNames.add(fileNameStored);
+            final QuestionAttachmentEntity questionAttachmentEntity = new QuestionAttachmentEntity();
+            questionAttachmentEntity.setCategory(AttachmentCategory.DESCRIPTION.toString());
+            questionAttachmentEntity.setFilename(file.getName());
+            if(questionIdOpt.isPresent()) {
+                questionAttachmentEntity.setQuestion(questionIdOpt.get());
+            }
+
+            attachments.add(questionAttachmentEntity);
         }
 
-        return description;
+        return attachments;
     }
 
     private File getAttachmentsFolder() {
@@ -467,13 +479,13 @@ public class QuizModule extends ReceiveModule {
             this.answers = answers;
 
             // To replace pictures in questions with old links in http. Those should be refreshed here
-            List<String> attachmentFileNames = new ArrayList<>(question.getAttachmentsFileNames());
-            final int sizeBefore = attachmentFileNames.size();
-            final String newDescription;
+            //List<String> attachmentFileNames = new ArrayList<>(question.getAttachments());
             try {
-                newDescription = findAndReplaceAndAddAttachmentViaHttpLinks(question.getText(), attachmentFileNames);
-                if (sizeBefore != attachmentFileNames.size()) {
-                    questionEntity = getDbService().refreshQuestionAttachments(question, newDescription, attachmentFileNames);
+                final List<QuestionAttachmentEntity> newAttachments =
+                        findAndReplaceAndAddAttachmentViaHttpLinksAndGetAttachments(question.getText(), Optional.of(question.getId()));
+                question.getAttachments().addAll(newAttachments);
+                if (!newAttachments.isEmpty()) {
+                    questionEntity = getDbService().addQuestionAttachments(newAttachments);
                 }
 
                 MessageBuilder questionBuilder = new MessageBuilder();
@@ -494,12 +506,14 @@ public class QuizModule extends ReceiveModule {
                         Button.primary(buttonIdBeginn + 2, "Antwort 3"),
                         Button.primary(buttonIdBeginn + 3, "Antwort 4"),
                         Button.primary(buttonIdBeginn + 4, "Keine Ahnung!")));
-                final boolean hasAttachment = !questionEntity.getQuestionFileNames().isEmpty();
-                if (hasAttachment) {
-                    String questionFileNames = questionEntity.getQuestionFileNames();
-                    questionFileNames = questionFileNames.startsWith(";") ? questionFileNames.replaceFirst(";", "") : questionFileNames;
-                    final String attachmentFileNameFirst = questionFileNames.split(";")[0].replace(";", "");
-                    final File attachmentFile = new File(getAttachmentsFolder(), attachmentFileNameFirst);
+                final List<QuestionAttachmentEntity> attachmentsDescription =
+                        getDbService().getQuestionAttachments(question.getId()).stream()
+                                .filter(questionAttachment -> questionAttachment.getCategory()
+                                        .equals(AttachmentCategory.DESCRIPTION)).collect(Collectors.toList());
+
+                if (attachmentsDescription.size() > 0) {
+                    final File attachmentFile =
+                            new File(getAttachmentsFolder(), attachmentsDescription.get(0).getFilename());
                     event.getMessage().reply(questionBuilder.build()).addFile(attachmentFile).queue();
                 } else {
                     event.getMessage().reply(questionBuilder.build()).queue();
@@ -509,7 +523,7 @@ public class QuizModule extends ReceiveModule {
             } catch (IOException e) {
                 e.printStackTrace();
                 event.getChannel().sendMessage("Sorry, in der Frage gibt es noch einen alten Link zu einem Bild, das " +
-                        "nicht mehr gefunden werden kann. Ich stelle die Frage erstmal zurück. Sag @kkuez Bescheid!")
+                                "nicht mehr gefunden werden kann. Ich stelle die Frage erstmal zurück. Sag @kkuez Bescheid!")
                         .queue();
                 System.out.println("Kaputte Frage: " + question.getText());
             }
