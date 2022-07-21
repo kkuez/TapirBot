@@ -467,14 +467,14 @@ public class QuizModule extends ReceiveModule {
 
         final List<QuestionAttachmentEntity> explainationAttachments =
                 question.getAttachments().stream()
-                        .filter(attachment -> attachment.getCategory().equals(AttachmentCategory.EXPLAINATION))
+                        .filter(attachment -> attachment.getCategory().equals(AttachmentCategory.EXPLAINATION.toString()))
                         .collect(Collectors.toList());
         if(explainationAttachments.isEmpty()) {
-            user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.toString()).queue());
+            user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.build()).queue());
         } else {
             final String attachmentFileName = explainationAttachments.get(0).getFilename();
             final File attachmentFile = new File(getAttachmentsFolder(), attachmentFileName);
-            user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.toString())
+            user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.build())
                     .addFile(attachmentFile).queue());
         }
         status = QuizStatus.NONE;
@@ -508,9 +508,10 @@ public class QuizModule extends ReceiveModule {
             try {
                 final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
                         findAndReplaceAndGetAttachmentOfHttpLinks(question.getText(), Optional.of(question.getId()));
-                question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
                 if (!questionAttachmentsAndDescriptionWrapper.getAttachments().isEmpty()) {
-                    getDbService().addQuestionAttachments(questionAttachmentsAndDescriptionWrapper.getAttachments());
+                    question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
+                    getDbService().addQuestionAttachments(questionAttachmentsAndDescriptionWrapper.getAttachments(),
+                            Optional.of(question.getId()));
                     questionEntity.setText(questionAttachmentsAndDescriptionWrapper.getDescription());
                     getDbService().updateQuestionEntity(questionEntity);
                 }
@@ -533,14 +534,13 @@ public class QuizModule extends ReceiveModule {
                         Button.primary(buttonIdBeginn + 2, "Antwort 3"),
                         Button.primary(buttonIdBeginn + 3, "Antwort 4"),
                         Button.primary(buttonIdBeginn + 4, "Keine Ahnung!")));
-                final List<QuestionAttachmentEntity> attachmentsDescription =
-                        getDbService().getQuestionAttachments(question.getId()).stream()
-                                .filter(questionAttachment -> questionAttachment.getCategory()
-                                        .equals(AttachmentCategory.DESCRIPTION)).collect(Collectors.toList());
+                final List<QuestionAttachmentEntity> descriptionAttachments =
+                        question.getAttachments().stream().filter(questionAttachment -> questionAttachment.getCategory()
+                        .equals(AttachmentCategory.DESCRIPTION.toString())).collect(Collectors.toList());
 
-                if (attachmentsDescription.size() > 0) {
+                if (descriptionAttachments.size() > 0) {
                     final File attachmentFile =
-                            new File(getAttachmentsFolder(), attachmentsDescription.get(0).getFilename());
+                            new File(getAttachmentsFolder(), descriptionAttachments.get(0).getFilename());
                     event.getMessage().reply(questionBuilder.build()).addFile(attachmentFile).queue();
                 } else {
                     event.getMessage().reply(questionBuilder.build()).queue();

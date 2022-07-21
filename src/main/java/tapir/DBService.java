@@ -381,12 +381,18 @@ public class DBService {
         return questionById;
     }
 
-    public void addQuestionAttachments(List<QuestionAttachmentEntity> attachments) {
+    public void addQuestionAttachments(List<QuestionAttachmentEntity> attachments, Optional<Integer> questionIdOpt) {
         final EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
-            attachments.forEach(questionAttachmentEntity -> questionAttachmentEntity.setQuestion(999999));
-            attachments.forEach(em::merge);
+            final int questionId;
+            if(questionIdOpt.isPresent()) {
+                questionId = questionIdOpt.get();
+            } else {
+                questionId = 999999;
+            }
+            attachments.forEach(questionAttachmentEntity -> questionAttachmentEntity.setQuestion(questionId));
+            attachments.forEach(em::persist);
             em.getTransaction().commit();
         } finally {
             em.close();
