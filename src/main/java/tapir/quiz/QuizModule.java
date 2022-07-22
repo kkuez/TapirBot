@@ -1,7 +1,7 @@
 package tapir.quiz;
 
-import entities.QuestionAttachmentEntity;
-import entities.QuizQuestionEntity;
+import tapir.entities.QuestionAttachmentEntity;
+import tapir.entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
@@ -293,21 +293,24 @@ public class QuizModule extends ReceiveModule {
     private void enterNewQuestionViaPM(String description, PrivateChannel channel, Optional<Event> event) {
         final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
         final List<Attachment> attachments = privateMessageReceivedEvent.getMessage().getAttachments();
-        final List<String> attachmentsFileNames = new ArrayList<>(attachments.size());
+        final List<QuestionAttachmentEntity> attachmentsEntities = new ArrayList<>(attachments.size());
         File attachmentsFolder = getAttachmentsFolder();
 
         for (Attachment attachment : attachments) {
             final UUID uuid = UUID.randomUUID();
             final String attachmentFileName = uuid + "." + attachment.getFileExtension();
             attachment.downloadToFile(new File(attachmentsFolder, attachmentFileName));
-            attachmentsFileNames.add(attachmentFileName);
+            final QuestionAttachmentEntity questionAttachmentEntity =
+                    AttachmentEntityFactory.create(AttachmentCategory.DESCRIPTION, attachmentFileName);
+            attachmentsEntities.add(questionAttachmentEntity);
         }
 
         try {
             final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
                     findAndReplaceAndGetAttachmentOfHttpLinks(description, Optional.empty());
+            attachmentsEntities.addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
             question = new QuizQuestion(99, questionAttachmentsAndDescriptionWrapper.getDescription(), null, null, "",
-                    questionAttachmentsAndDescriptionWrapper.getAttachments());
+                    attachmentsEntities);
 
             channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
             status = QuizStatus.WAITING_QUESTION_ANSWERS;
@@ -333,13 +336,8 @@ public class QuizModule extends ReceiveModule {
                 e.printStackTrace();
             }
             description = description.replace(linkToPicture, "");
-            final QuestionAttachmentEntity questionAttachmentEntity = new QuestionAttachmentEntity();
-            questionAttachmentEntity.setCategory(AttachmentCategory.DESCRIPTION.toString());
-            questionAttachmentEntity.setFilename(file.getName());
-            if(questionIdOpt.isPresent()) {
-                questionAttachmentEntity.setQuestion(questionIdOpt.get());
-            }
-
+            final QuestionAttachmentEntity questionAttachmentEntity =
+                    AttachmentEntityFactory.create(questionIdOpt, AttachmentCategory.DESCRIPTION, file.getName());
             attachments.add(questionAttachmentEntity);
         }
 
@@ -602,7 +600,9 @@ public class QuizModule extends ReceiveModule {
         }
     }
 
-    //Just a helper class to get back description AND all attachments in #findAndReplaceAndGetAttachmentOfHttpLinks
+    /**
+     * Just a helper class to return description AND all attachments in #findAndReplaceAndGetAttachmentOfHttpLinks
+     */
     private class QuestionAttachmentsAndDescriptionWrapper {
         private String description;
         private List<QuestionAttachmentEntity> attachment;

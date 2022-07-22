@@ -1,6 +1,6 @@
 package tapir.quiz;
 
-import entities.QuestionAttachmentEntity;
+import tapir.entities.QuestionAttachmentEntity;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,9 +1,8 @@
-package entities;
+package tapir.entities;
 
 import javax.annotation.Nullable;
 import javax.persistence.*;
 import java.io.Serializable;
-import java.util.List;
 
 @Entity
 @Table(name = "QuizQuestions")

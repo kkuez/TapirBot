@@ -1,4 +1,4 @@
-package entities;
+package tapir.entities;
 
 import javax.persistence.*;
 import java.io.Serializable;

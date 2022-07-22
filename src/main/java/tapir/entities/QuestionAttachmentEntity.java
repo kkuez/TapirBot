@@ -1,4 +1,4 @@
-package entities;
+package tapir.entities;
 
 import javax.annotation.Nullable;
 import javax.persistence.*;

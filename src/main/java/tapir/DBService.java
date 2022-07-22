@@ -1,7 +1,7 @@
 package tapir;
 
-import entities.QuestionAttachmentEntity;
-import entities.QuizQuestionEntity;
+import tapir.entities.QuestionAttachmentEntity;
+import tapir.entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.entities.User;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
