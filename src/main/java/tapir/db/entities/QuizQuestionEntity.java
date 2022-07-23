@@ -18,6 +18,7 @@ public class QuizQuestionEntity implements Serializable {
     private String Wrong_Answer_2;
     private String Wrong_Answer_3;
     private String Explaination;
+    @Column(name="user")
     private Long user;
 
     public Integer getId() {

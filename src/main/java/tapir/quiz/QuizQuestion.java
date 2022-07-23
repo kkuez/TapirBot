@@ -48,5 +48,11 @@ public class QuizQuestion {
         return attachments;
     }
 
+    public void setText(String text) {
+        this.text = text;
+    }
 
+    public void setExplaination(String explaination) {
+        this.explaination = explaination;
+    }
 }

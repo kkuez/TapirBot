@@ -1,8 +1,6 @@
 package tapir.quiz;
 
 import tapir.db.factories.QuestionAttachmentFactory;
-import tapir.db.entities.QuestionAttachmentEntity;
-import tapir.db.entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.MessageBuilder;
 import net.dv8tion.jda.api.entities.*;
@@ -337,9 +335,9 @@ public class QuizModule extends ReceiveModule {
                 e.printStackTrace();
             }
             description = description.replace(linkToPicture, "");
-            final QuestionAttachment questionAttachmentEntity =
+            final QuestionAttachment questionAttachment =
                     QuestionAttachmentFactory.createPojo(questionIdOpt, AttachmentCategory.DESCRIPTION, file.getName());
-            attachments.add(questionAttachmentEntity);
+            attachments.add(questionAttachment);
         }
 
         return new QuestionAttachmentsAndDescriptionWrapper(description, attachments);
@@ -493,10 +491,8 @@ public class QuizModule extends ReceiveModule {
         List<QuizQuestion> questionsForUser = getDbService().getFilteredQuestionsForUser(user);
         if (!questionsForUser.isEmpty()) {
             Collections.shuffle(questionsForUser);
-            //TODO Either use the entity or a quesiton object!!!!!
             question = questionsForUser.get(0);
 
-            QuizQuestionEntity questionEntity = getDbService().getQuestionById(question.getId());
             List<QuizAnswer> answers = question.getAnswers();
             Collections.shuffle(answers);
             this.answers = answers;
@@ -504,13 +500,13 @@ public class QuizModule extends ReceiveModule {
             question.getAttachments().addAll(questionAttachments);
 
             try {
-                findAndReplaceAttachmentsInLinks(questionEntity);
+                findAndReplaceAttachmentsInLinks();
 
                 MessageBuilder questionBuilder = new MessageBuilder();
-                final String userName = getDbService().getUserInfoById(questionEntity.getUser()).get("name");
+                final String userName = question.getCreatorName();
                 questionBuilder.append(user.getName()).append(", deine Frage von **").append(userName)
                         .append("**:\n ");
-                questionBuilder.append("**").append(questionEntity.getText()).append("**\n");
+                questionBuilder.append("**").append(question.getText()).append("**\n");
                 questionBuilder.append("*Antwort 1:*\t** ").append(answers.get(0).getText()).append("**").append("\n");
                 questionBuilder.append("*Antwort 2:*\t** ").append(answers.get(1).getText()).append("**").append("\n");
                 questionBuilder.append("*Antwort 3:*\t** ").append(answers.get(2).getText()).append("**").append("\n");
@@ -554,15 +550,15 @@ public class QuizModule extends ReceiveModule {
     /**
      * To replace pictures in questions with old links in http. Those should be refreshed here
       */
-    private void findAndReplaceAttachmentsInLinks(QuizQuestionEntity questionEntity) throws IOException {
+    private void findAndReplaceAttachmentsInLinks() throws IOException {
         final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
                 findAndReplaceAndGetAttachmentOfHttpLinks(question.getText(), Optional.of(question.getId()));
         if (!questionAttachmentsAndDescriptionWrapper.getAttachments().isEmpty()) {
             question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
             getDbService().addQuestionAttachments(questionAttachmentsAndDescriptionWrapper.getAttachments(),
                     Optional.of(question.getId()));
-            questionEntity.setText(questionAttachmentsAndDescriptionWrapper.getDescription());
-            getDbService().updateQuestionEntity(questionEntity);
+            question.setText(questionAttachmentsAndDescriptionWrapper.getDescription());
+            getDbService().updateQuestion(question);
         }
     }
 

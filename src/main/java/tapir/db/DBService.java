@@ -6,6 +6,7 @@ import tapir.db.entities.QuestionAttachmentEntity;
 import tapir.db.entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.entities.User;
 import tapir.db.factories.QuestionAttachmentFactory;
+import tapir.db.factories.QuestionFactory;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
 import tapir.quiz.QuestionAttachment;
@@ -77,37 +78,29 @@ public class DBService {
      * Gets Questions which the user has not yet answered
      */
     public List<QuizQuestion> getFilteredQuestionsForUser(User user) {
+       test(user);
         final long userId = getUserId(user);
-        List<QuizQuestion> questions = new ArrayList<>();
-        try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("Select * from QuizQuestions qq inner join User u on " +
-                     "u.id=qq.user where not exists (select * from User_QuizQuestions uqq where qq.id=uqq.question " +
-                     "and uqq.user=" + userId + ") and not qq.user=" + userId)) {
-            while (rs.next()) {
-                List<QuizAnswer> answers = new ArrayList<>(4);
-                answers.add(new QuizAnswer(rs.getString(QuizModule.RIGHT_ANSWER), QuizModule.RIGHT_ANSWER));
-                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_1), QuizModule.WRONG_ANSWER_1));
-                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
-                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
-                final String attachmentFileNamesString = rs.getString("QuestionFileNames");
-                final String attachmentFileNamesStringForList =
-                        attachmentFileNamesString == null ? "" : attachmentFileNamesString;
+        //TODO User aus dem Result nehmen (siehe Object[])
+        final List<Object[]> questionEntitiesUntyped =
+                emf.createEntityManager()
+                        .createQuery("from QuizQuestionEntity qq inner join UserEntity u on " +
+                "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
+                "and uqq.user=" + userId + ") and not qq.user=" + userId)
+                        .getResultList();
 
-                final int questionId = rs.getInt("id");
-                List<QuestionAttachment> attachments = getQuestionAttachments(questionId);
-                QuizQuestion question = new QuizQuestion(
-                        questionId,
-                        rs.getString("text"),
-                        answers,
-                        rs.getString("name"),
-                        rs.getString("Explaination"),
-                        attachments);
-                questions.add(question);
-            }
-        } catch (SQLException e) {
-            throw new TapirException("Could not get questions for user " + user.getIdLong(), e);
+        List<QuizQuestion> questions = new ArrayList<>(questionEntitiesUntyped.size());
+        for (Object[] o : questionEntitiesUntyped) {
+            final QuizQuestion question = QuestionFactory.createPojo(this, (QuizQuestionEntity) o[0]);
+            questions.add(question);
         }
         return questions;
+    }
+
+    private void test(User user) {
+        final long userId = user.getIdLong();
+        emf.createEntityManager().createQuery("from QuizQuestionEntity qq inner join UserEntity u on " +
+                "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
+                        "and uqq.user=" + userId + ") and not qq.user=" + userId);
     }
 
     private List<QuestionAttachmentEntity> getQuestionAttachmentsEntities(int questionId) {
@@ -370,20 +363,20 @@ public class DBService {
                 count = rs.getInt("count");
             }
         } catch (SQLException e) {
-            throw new TapirException("Could not get countof orden  for user " + userId, e);
+            throw new TapirException("Could not get count of orden  for user " + userId, e);
         }
         return count;
     }
 
-    private QuizQuestionEntity getQuestionById(int id, EntityManager em) {
+    private QuizQuestionEntity getQuestionEntityById(int id, EntityManager em) {
         return em.find(QuizQuestionEntity.class, id);
     }
 
-    public QuizQuestionEntity getQuestionById(int id) {
+    private QuizQuestionEntity getQuestionEntityById(int id) {
         final EntityManager em = emf.createEntityManager();
         final QuizQuestionEntity questionById;
         try {
-            questionById = getQuestionById(id, em);
+            questionById = getQuestionEntityById(id, em);
         } finally {
             em.close();
         }
@@ -409,7 +402,14 @@ public class DBService {
         }
     }
 
-    public void updateQuestionEntity(QuizQuestionEntity questionEntity) {
+    public void updateQuestion(QuizQuestion question) {
+        final QuizQuestionEntity questionEntity = getQuestionEntityById(question.getId());
+        questionEntity.setExplaination(question.getExplaination());
+        questionEntity.setText(question.getText());
+        questionEntity.setRight_Answer(question.getAnswers().get(0).getText());
+        questionEntity.setWrong_Answer_1(question.getAnswers().get(1).getText());
+        questionEntity.setWrong_Answer_2(question.getAnswers().get(2).getText());
+        questionEntity.setWrong_Answer_3(question.getAnswers().get(3).getText());
         final EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();

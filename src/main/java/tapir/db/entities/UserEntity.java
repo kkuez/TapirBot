@@ -5,7 +5,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name = "User")
-public class User implements Serializable {
+public class UserEntity implements Serializable {
 
     @Id
     //https://stackoverflow.com/a/25636230/9067966
