@@ -1,10 +1,14 @@
-package tapir;
+package tapir.db;
 
-import tapir.entities.QuestionAttachmentEntity;
-import tapir.entities.QuizQuestionEntity;
+import tapir.Main;
+import tapir.UserWrapper;
+import tapir.db.entities.QuestionAttachmentEntity;
+import tapir.db.entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.entities.User;
+import tapir.db.factories.QuestionAttachmentFactory;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
+import tapir.quiz.QuestionAttachment;
 import tapir.quiz.QuizModule;
 import tapir.quiz.QuizAnswer;
 import tapir.quiz.QuizQuestion;
@@ -12,6 +16,7 @@ import tapir.quiz.QuizQuestion;
 import java.io.File;
 import java.sql.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import javax.persistence.*;
 
 public class DBService {
@@ -89,7 +94,7 @@ public class DBService {
                         attachmentFileNamesString == null ? "" : attachmentFileNamesString;
 
                 final int questionId = rs.getInt("id");
-                List<QuestionAttachmentEntity> attachments = getQuestionAttachments(questionId);
+                List<QuestionAttachment> attachments = getQuestionAttachments(questionId);
                 QuizQuestion question = new QuizQuestion(
                         questionId,
                         rs.getString("text"),
@@ -105,7 +110,7 @@ public class DBService {
         return questions;
     }
 
-    public List<QuestionAttachmentEntity> getQuestionAttachments(int questionId) {
+    private List<QuestionAttachmentEntity> getQuestionAttachmentsEntities(int questionId) {
         final EntityManager em = emf.createEntityManager();
         final List<QuestionAttachmentEntity> resultList;
         try{
@@ -116,7 +121,12 @@ public class DBService {
         } finally {
             em.close();
         }
-            return resultList;
+        return resultList;
+    }
+
+    public List<QuestionAttachment> getQuestionAttachments(int questionId) {
+            return getQuestionAttachmentsEntities(questionId).stream()
+                    .map(QuestionAttachmentFactory::createPojo).collect(Collectors.toList());
     }
 
     private long getUserId(User user) {
@@ -179,6 +189,7 @@ public class DBService {
         quizQuestionEntity.setExplaination(explaination);
         quizQuestionEntity.setUser(user.getIdLong());
 
+        // Persist Question
         final EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
@@ -187,11 +198,14 @@ public class DBService {
         } finally {
             em.close();
         }
+
+        // Persist QuestionAttachments
         final EntityManager emAttachments = emf.createEntityManager();
         try {
-            question.getAttachments().forEach(a->a.setQuestion(quizQuestionEntity.getId()));
+            question.getAttachments().forEach(a->a.setQuestionId(Optional.of(quizQuestionEntity.getId())));
+            final List<QuestionAttachmentEntity> entities = question.getAttachments().stream().map(QuestionAttachmentFactory::createEntity).collect(Collectors.toList());
             emAttachments.getTransaction().begin();
-            for (QuestionAttachmentEntity questionAttachmentEntity : question.getAttachments()) {
+            for (QuestionAttachmentEntity questionAttachmentEntity : entities) {
                 emAttachments.persist(questionAttachmentEntity);
             }
             emAttachments.getTransaction().commit();
@@ -199,10 +213,6 @@ public class DBService {
             emAttachments.close();
         }
         System.out.println();
-    }
-
-    private String mangleChars(String input) {
-        return input.replace("'", "''");
     }
 
     /**
@@ -215,7 +225,6 @@ public class DBService {
             while (rs.next()) {
                 final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
                 final int questionId = rs.getInt("id");
-                final List<QuestionAttachmentEntity> questionAttachments = getQuestionAttachments(questionId);
 
                 quizQuestionEntity.setId(questionId);
                 quizQuestionEntity.setUser(rs.getLong("user"));
@@ -381,7 +390,8 @@ public class DBService {
         return questionById;
     }
 
-    public void addQuestionAttachments(List<QuestionAttachmentEntity> attachments, Optional<Integer> questionIdOpt) {
+    public void addQuestionAttachments(List<QuestionAttachment> attachments, Optional<Integer> questionIdOpt) {
+        final List<QuestionAttachmentEntity> entities = attachments.stream().map(QuestionAttachmentFactory::createEntity).collect(Collectors.toList());
         final EntityManager em = emf.createEntityManager();
         try {
             em.getTransaction().begin();
@@ -391,8 +401,8 @@ public class DBService {
             } else {
                 questionId = 999999;
             }
-            attachments.forEach(questionAttachmentEntity -> questionAttachmentEntity.setQuestion(questionId));
-            attachments.forEach(em::persist);
+            entities.forEach(questionAttachmentEntity -> questionAttachmentEntity.setQuestion(questionId));
+            entities.forEach(em::persist);
             em.getTransaction().commit();
         } finally {
             em.close();

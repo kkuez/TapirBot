@@ -7,6 +7,7 @@ import javax.annotation.Nonnull;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
+import tapir.db.DBService;
 
 public class PMListener extends TapirListener {
 

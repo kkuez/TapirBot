@@ -6,7 +6,7 @@ import net.dv8tion.jda.api.events.Event;
 import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
-import tapir.DBService;
+import tapir.db.DBService;
 
 import java.util.*;
 

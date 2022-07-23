@@ -10,7 +10,7 @@ import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
-import tapir.DBService;
+import tapir.db.DBService;
 import tapir.ReceiveModule;
 
 import java.io.*;

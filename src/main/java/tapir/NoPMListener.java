@@ -3,6 +3,7 @@ package tapir;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
+import tapir.db.DBService;
 
 import java.util.Properties;
 import java.util.Set;
