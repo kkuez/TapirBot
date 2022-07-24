@@ -138,13 +138,7 @@ public class DBService {
     public List<QuizModule.RankingTableEntry> getUserScoresPointRated() {
         List<QuizModule.RankingTableEntry> rankingTable = new ArrayList<>();
 
-        final String sql = "select user as userId, " +
-                "(select name from User where id=uuq.user) as userName, " +
-                "(select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) " +
-                "from User_QuizQuestions where user=uuq.user) as points, " +
-                "count(question) as answered " +
-                "from User_QuizQuestions uuq" +
-                " group by user order by points asc";
+        final String sql = "select user as userId, (select name from User where id=uuq.user) as userName, (select sum(IIF(answer ='Right_Answer', 3, IIF(answer = 'Keine Ahnung!', 0, -2))) from User_QuizQuestions where user=uuq.user) as points, count(question) as answered, (select Count(*) from QuizQuestions qq WHERE qq.user=uuq.user) as created from User_QuizQuestions uuq group by user order by points asc";
 
         try (Statement statement = getConnection().createStatement();
              ResultSet rs = statement.executeQuery(sql)) {
@@ -155,7 +149,7 @@ public class DBService {
                                 rs.getString("userName"),
                                 rs.getInt("points"),
                                 rs.getInt("answered"),
-                                getQuestionsCreatedByUser(rs.getLong("userId")).size());
+                                rs.getInt("created"));
                 rankingTable.add(rankingTableEntry);
             }
         } catch (SQLException e) {
@@ -199,24 +193,6 @@ public class DBService {
         } finally {
             emAttachments.close();
         }
-    }
-
-    /**
-     * Gets questions which where created by the user
-     */
-    public List<QuizQuestion> getQuestionsCreatedByUser(long userId) {
-        final EntityManager em = emf.createEntityManager();
-        final List<QuizQuestionEntity> resultList;
-        try{
-            // Instead of table name, one has to select from the java class name
-            // https://stackoverflow.com/questions/9954590/hibernate-error-querysyntaxexception-users-is-not-mapped-from-users
-            resultList = em.createQuery("from QuizQuestionEntity where user=" + userId,
-                    QuizQuestionEntity.class).getResultList();
-        } finally {
-            em.close();
-        }
-
-        return resultList.stream().map(entity -> QuestionFactory.createPojo(this, entity)).collect(Collectors.toList());
     }
 
     public Set<Long> getKnownUsers() {
