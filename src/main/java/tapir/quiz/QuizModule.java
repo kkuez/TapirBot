@@ -258,16 +258,22 @@ public class QuizModule extends ReceiveModule {
                         break;
                     }
                 } else if (i == 5) {
-                    final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
-                    try {
-                        final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
-                                findAndReplaceAndGetAttachmentOfHttpLinks(privateMessageReceivedEvent.getMessage().getContentRaw(), Optional.empty());
-                        questionAttachmentsAndDescriptionWrapper.getAttachments()
-                                .forEach(ea -> ea.setCategory(AttachmentCategory.EXPLAINATION));
-                        explaination = questionAttachmentsAndDescriptionWrapper.getDescription();
-                        question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
-                    } catch (IOException e) {
-                        e.printStackTrace();
+                    //Case user entered an explaination
+                    if(event.get() instanceof PrivateMessageReceivedEvent) {
+                        final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
+                        try {
+                            final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
+                                    findAndReplaceAndGetAttachmentOfHttpLinks(privateMessageReceivedEvent.getMessage().getContentRaw(), Optional.empty());
+                            questionAttachmentsAndDescriptionWrapper.getAttachments()
+                                    .forEach(ea -> ea.setCategory(AttachmentCategory.EXPLAINATION));
+                            explaination = questionAttachmentsAndDescriptionWrapper.getDescription();
+                            question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                    } else {
+                        explaination = "";
                     }
                     getDbService().enterQuestion(user, question, answers, explaination);
                     if (status.equals(QuizStatus.WAITING_ANSWER_EXPLAINATION)) {

@@ -167,7 +167,6 @@ public class DBService {
     }
 
     public void enterQuestion(User user, QuizQuestion question, List<QuizAnswer> answers, String explaination) {
-
         final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
         quizQuestionEntity.setText(question.getText());
         quizQuestionEntity.setRight_Answer(answers.get(0).getText());
@@ -205,29 +204,19 @@ public class DBService {
     /**
      * Gets questions which where created by the user
      */
-    public List<QuizQuestionEntity> getQuestionsCreatedByUser(long userId) {
-        List<QuizQuestionEntity> questions = new ArrayList<>();
-        try (Statement statement = getConnection().createStatement();
-             ResultSet rs = statement.executeQuery("Select * from QuizQuestions where user=" + userId)) {
-            while (rs.next()) {
-                final QuizQuestionEntity quizQuestionEntity = new QuizQuestionEntity();
-                final int questionId = rs.getInt("id");
-
-                quizQuestionEntity.setId(questionId);
-                quizQuestionEntity.setUser(rs.getLong("user"));
-                quizQuestionEntity.setText(rs.getString("text"));
-                quizQuestionEntity.setRight_Answer(rs.getString(QuizModule.RIGHT_ANSWER));
-                quizQuestionEntity.setWrong_Answer_1(rs.getString(QuizModule.WRONG_ANSWER_1));
-                quizQuestionEntity.setWrong_Answer_2(rs.getString(QuizModule.WRONG_ANSWER_2));
-                quizQuestionEntity.setWrong_Answer_3(rs.getString(QuizModule.WRONG_ANSWER_3));
-                quizQuestionEntity.setExplaination(rs.getString("Explaination"));
-                questions.add(quizQuestionEntity);
-            }
-        } catch (SQLException e) {
-            throw new TapirException("Could not get questions of user " + userId, e);
+    public List<QuizQuestion> getQuestionsCreatedByUser(long userId) {
+        final EntityManager em = emf.createEntityManager();
+        final List<QuizQuestionEntity> resultList;
+        try{
+            // Instead of table name, one has to select from the java class name
+            // https://stackoverflow.com/questions/9954590/hibernate-error-querysyntaxexception-users-is-not-mapped-from-users
+            resultList = em.createQuery("from QuizQuestionEntity where user=" + userId,
+                    QuizQuestionEntity.class).getResultList();
+        } finally {
+            em.close();
         }
 
-        return questions;
+        return resultList.stream().map(entity -> QuestionFactory.createPojo(this, entity)).collect(Collectors.toList());
     }
 
     public Set<Long> getKnownUsers() {
