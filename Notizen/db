@@ -23,7 +23,6 @@ CREATE TABLE "User_QuizQuestions" (
 	"question"	INTEGER,
 	"user"	NUMERIC,
 	"answer"	TEXT,
-	"explaination"	TEXT,
 	PRIMARY KEY("question","user"),
 	FOREIGN KEY("question") REFERENCES "QuizQuestions.id",
 	FOREIGN KEY("user") REFERENCES "User.id"

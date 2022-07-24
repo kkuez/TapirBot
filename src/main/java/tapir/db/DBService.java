@@ -5,8 +5,10 @@ import tapir.UserWrapper;
 import tapir.db.entities.QuestionAttachmentEntity;
 import tapir.db.entities.QuizQuestionEntity;
 import net.dv8tion.jda.api.entities.User;
+import tapir.db.entities.UserQuizQuestionEntity;
 import tapir.db.factories.QuestionAttachmentFactory;
 import tapir.db.factories.QuestionFactory;
+import tapir.db.factories.UserQuizQuestionFactory;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
 import tapir.quiz.QuestionAttachment;
@@ -22,9 +24,8 @@ import javax.persistence.*;
 
 public class DBService {
 
-    private static final String ATTACHMENT_FILENAME_SEPERATOR = ";";
     private final String dbPath;
-    EntityManagerFactory emf;
+    private EntityManagerFactory emf;
 
     private Set<Long> knownUsers;
 
@@ -78,7 +79,6 @@ public class DBService {
      * Gets Questions which the user has not yet answered
      */
     public List<QuizQuestion> getFilteredQuestionsForUser(User user) {
-       test(user);
         final long userId = getUserId(user);
         //TODO User aus dem Result nehmen (siehe Object[])
         final List<Object[]> questionEntitiesUntyped =
@@ -94,13 +94,6 @@ public class DBService {
             questions.add(question);
         }
         return questions;
-    }
-
-    private void test(User user) {
-        final long userId = user.getIdLong();
-        emf.createEntityManager().createQuery("from QuizQuestionEntity qq inner join UserEntity u on " +
-                "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
-                        "and uqq.user=" + userId + ") and not qq.user=" + userId);
     }
 
     private List<QuestionAttachmentEntity> getQuestionAttachmentsEntities(int questionId) {
@@ -131,12 +124,14 @@ public class DBService {
     }
 
     public void sendAnswer(long userId, int questionId, String answer) {
-        try (Statement statement = getConnection().createStatement();) {
-            statement.executeUpdate(
-                    "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId
-                            + "," + questionId + ")");
-        } catch (SQLException e) {
-            throw new TapirException("Could send answer to user " + userId, e);
+        UserQuizQuestionEntity entity = UserQuizQuestionFactory.createEntity(userId, questionId, answer);
+        final EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+            em.persist(entity);
+            em.getTransaction().commit();
+        } finally {
+            em.close();
         }
     }
 
@@ -205,7 +200,6 @@ public class DBService {
         } finally {
             emAttachments.close();
         }
-        System.out.println();
     }
 
     /**

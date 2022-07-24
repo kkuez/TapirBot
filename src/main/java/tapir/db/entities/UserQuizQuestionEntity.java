@@ -8,17 +8,14 @@ import java.io.Serializable;
 @Table(name = "User_QuizQuestions")
 public class UserQuizQuestionEntity implements Serializable {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "question")
     @Nullable
     Integer question;
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "user")
     @Nullable
     long user;
     String answer;
-    String explaination;
 
     public int getQuestion() {
         return question;
@@ -44,11 +41,4 @@ public class UserQuizQuestionEntity implements Serializable {
         this.answer = answer;
     }
 
-    public String getExplaination() {
-        return explaination;
-    }
-
-    public void setExplaination(String explaination) {
-        this.explaination = explaination;
-    }
 }
