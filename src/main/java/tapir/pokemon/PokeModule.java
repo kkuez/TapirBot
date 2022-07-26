@@ -12,6 +12,7 @@ import net.dv8tion.jda.api.interactions.components.Button;
 import net.dv8tion.jda.api.requests.restaction.MessageAction;
 import tapir.db.DBService;
 import tapir.ReceiveModule;
+import tapir.exception.TapirException;
 
 import java.io.*;
 import java.net.URL;
@@ -60,7 +61,7 @@ public class PokeModule extends ReceiveModule {
                 try {
                     Thread.sleep(timeToWait);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    throw new TapirException("", e);
                 }
 
                 try {
@@ -68,7 +69,7 @@ public class PokeModule extends ReceiveModule {
                     makeCurrentAppear();
                     makeOldDisappear();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new TapirException("Could not start new catch loop!", e);
                 }
             }
         };
@@ -82,7 +83,7 @@ public class PokeModule extends ReceiveModule {
                 try {
                     Thread.sleep(300000);
                 } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    throw new TapirException("", e);
                 }
                 final String disappearedMessage = "\n...und wieder verschwunden.";
                 getGeneralChannels().forEach(channel -> {
@@ -116,7 +117,6 @@ public class PokeModule extends ReceiveModule {
         try {
             pictureTemp = File.createTempFile("pokemon", ".png)");
         } catch (IOException e) {
-            e.printStackTrace();
             return;
         }
         try (FileOutputStream fos = new FileOutputStream(pictureTemp);
@@ -133,7 +133,7 @@ public class PokeModule extends ReceiveModule {
             });
             pictureTemp.delete();
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not make current pokemon appear!", e);
         }
     }
 
@@ -319,7 +319,7 @@ public class PokeModule extends ReceiveModule {
                     getDbService().registerPokemon(user, gambledPokemon);
                     getDbService().removePokemonFromUser(pokemonsToRemove);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    throw new TapirException("Could not gamble pokemon!", e);
                 }
 
 
@@ -422,7 +422,7 @@ public class PokeModule extends ReceiveModule {
         try {
             swapPairOpt = SWAP_PAIRS.stream().filter(sp -> sp.containsUsers(user)).findAny();
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get swap pokemon!", e);
         }
 
         if (swapPairOpt.isEmpty() && event.get() instanceof GuildMessageReceivedEvent) {
@@ -514,7 +514,7 @@ public class PokeModule extends ReceiveModule {
                 ordenString = getOrdenString(user.getIdLong());
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not process pokedex!", e);
         }
 
         final int size = pokemonList.stream().map(Pokemon::getName).collect(Collectors.toSet()).size();

@@ -42,9 +42,9 @@ public class DBService {
             Class.forName("org.sqlite.JDBC");
             DriverManager.registerDriver(new org.sqlite.JDBC());
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            throw new TapirException("", e);
+        } catch (SQLException ex) {
+            throw new TapirException("Something sqlig went wrong!", ex);
         }
     }
 
@@ -85,8 +85,7 @@ public class DBService {
                 emf.createEntityManager()
                         .createQuery("from QuizQuestionEntity qq inner join UserEntity u on " +
                 "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
-                "and uqq.user=" + userId + ") and not qq.user=" + userId)
-                        .getResultList();
+                "and uqq.user=" + userId + ") and not qq.user=" + userId).getResultList();
 
         List<QuizQuestion> questions = new ArrayList<>(questionEntitiesUntyped.size());
         for (Object[] o : questionEntitiesUntyped) {
@@ -293,8 +292,7 @@ public class DBService {
                 throw new RuntimeException("Not all pokemons removed!");
             }
         } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("Couldnt Remove Pokemon", e);
+            throw new TapirException("Couldnt Remove Pokemon", e);
         }
     }
 

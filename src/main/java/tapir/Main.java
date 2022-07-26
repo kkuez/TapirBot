@@ -7,6 +7,7 @@ import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.ChunkingFilter;
 import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import tapir.db.DBService;
+import tapir.exception.TapirException;
 
 import javax.security.auth.login.LoginException;
 import java.io.*;
@@ -87,7 +88,7 @@ public class Main {
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get PokeChannels!", e);
         }
         return pokemonChannels;
     }
@@ -119,7 +120,7 @@ public class Main {
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new TapirException("Could not get allowed channels!", e);
         }
         return generalChannels;
     }

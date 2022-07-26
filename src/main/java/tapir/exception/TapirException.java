@@ -6,7 +6,6 @@ public class TapirException extends RuntimeException{
     private Exception e;
 
     public TapirException(String message, Exception e) {
-
         this.message = message;
         this.e = e;
     }

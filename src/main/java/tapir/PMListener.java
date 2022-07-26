@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import tapir.db.DBService;
+import tapir.exception.TapirException;
 
 public class PMListener extends TapirListener {
 
@@ -25,7 +26,7 @@ public class PMListener extends TapirListener {
             userWrapper.handlePM(event, getDbService(), getBot(), getAllowedChannels(), getUserNotAllowedToAsk());
         } catch (Exception e) {
             event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :( Sag @kkuez Bescheid!").queue();
-            e.printStackTrace();
+            throw new TapirException("", e);
         }
     }
 

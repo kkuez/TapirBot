@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.interactions.components.ActionRow;
 import net.dv8tion.jda.api.interactions.components.Button;
 import tapir.db.DBService;
 import tapir.ReceiveModule;
+import tapir.exception.TapirException;
 
 import java.io.*;
 import java.net.MalformedURLException;
@@ -269,7 +270,7 @@ public class QuizModule extends ReceiveModule {
                             explaination = questionAttachmentsAndDescriptionWrapper.getDescription();
                             question.getAttachments().addAll(questionAttachmentsAndDescriptionWrapper.getAttachments());
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            throw new TapirException("Could not process attachments of question!", e);
                         }
 
                     } else {
@@ -320,9 +321,9 @@ public class QuizModule extends ReceiveModule {
             channel.sendMessage("Wie lautet die richtige Antwort? (Abbrechen mit !abbruch hier via PM)").queue();
             status = QuizStatus.WAITING_QUESTION_ANSWERS;
         } catch (IOException e) {
-            e.printStackTrace();
             channel.sendMessage("Sorry, es konnte kein Bild mit dem Link gefunden werden, ist der wirklich richtig?")
                     .queue();
+            throw new TapirException("", e);
         }
     }
 
@@ -338,7 +339,7 @@ public class QuizModule extends ReceiveModule {
                  final FileOutputStream fos = new FileOutputStream(file)) {
                 bis.transferTo(fos);
             } catch (MalformedURLException e) {
-                e.printStackTrace();
+                throw new TapirException("Could not write new description!", e);
             }
             description = description.replace(linkToPicture, "");
             final QuestionAttachment questionAttachment =
@@ -539,11 +540,10 @@ public class QuizModule extends ReceiveModule {
 
                 this.status = QuizStatus.WAITING_ANSWER;
             } catch (IOException e) {
-                e.printStackTrace();
                 event.getChannel().sendMessage("Sorry, in der Frage gibt es noch einen alten Link zu einem Bild, das " +
                                 "nicht mehr gefunden werden kann. Ich stelle die Frage erstmal zurück. Sag @kkuez Bescheid!")
                         .queue();
-                System.out.println("Kaputte Frage: " + question.getText());
+                throw new TapirException("Kaputte Frage: " + question.getText(), e);
             }
 
         } else {

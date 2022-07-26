@@ -4,6 +4,7 @@ import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.entities.TextChannel;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import tapir.db.DBService;
+import tapir.exception.TapirException;
 
 import java.util.Properties;
 import java.util.Set;
@@ -29,7 +30,7 @@ public class NoPMListener extends TapirListener {
             userWrapper.handle(event, getDbService(), getAllowedChannels(), getUserNotAllowedToAsk());
         } catch (Exception e) {
             event.getChannel().sendMessage("Ups!\nDa ist was schiefgegangen :(\n@kkuez");
-            e.printStackTrace();
+            throw new TapirException("", e);
         }
     }
 }

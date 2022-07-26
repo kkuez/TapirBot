@@ -8,6 +8,7 @@ import net.dv8tion.jda.api.events.interaction.ButtonClickEvent;
 import net.dv8tion.jda.api.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.api.events.message.priv.PrivateMessageReceivedEvent;
 import tapir.db.DBService;
+import tapir.exception.TapirException;
 import tapir.pokemon.PokeModule;
 import tapir.quiz.QuizModule;
 
@@ -125,7 +126,7 @@ public class UserWrapper {
                                 lastModifiedTimeUniversalTime.toInstant().atZone(ZoneId.systemDefault()).toString();
                         event.getChannel().sendMessage(rightTime).queue();
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        throw new TapirException("Could not get version!", e);
                     }
                 }
                 break;
