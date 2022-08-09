@@ -68,7 +68,25 @@ public class QuizModule extends ReceiveModule {
                     help(channel);
                     break;
                 case "info":
-                    boolean global = messages.length == 3 && messages[2].equals("global");
+                    boolean global = false;
+                    if (messages.length == 3) {
+                        if (messages[2].equals("global")) {
+                            global = true;
+                        } else {
+                            final long userId = Long.parseLong(messages[2].replace("<@", "").replace(">", ""));
+                            RankingTableEntry userQuestionInfo = getDbService().getUserQuestionInfo(userId);
+                            final int openQuestionsCount = getDbService().getFilteredQuestionsForUser(userId).size();
+                            StringBuilder messageBuilder = new StringBuilder();
+                            messageBuilder.append(":warning:Quizinfo für **").append(userQuestionInfo.userName).append("**::warning: \n\n");
+                            messageBuilder.append("Totale Punke: *").append(userQuestionInfo.points + userQuestionInfo.created)
+                                    .append("*\n");
+                            messageBuilder.append("Fragen erstellt: *").append(userQuestionInfo.created).append("*\n");
+                            messageBuilder.append("Fragen beantwortet: *").append(userQuestionInfo.answered).append("*\n");
+                            messageBuilder.append("Fragen offen: *").append(openQuestionsCount).append("*");
+                            channel.sendMessage(messageBuilder).queue();
+                            return;
+                        }
+                    }
                     info(channel, global);
                     break;
                 case "new":
@@ -260,7 +278,7 @@ public class QuizModule extends ReceiveModule {
                     }
                 } else if (i == 5) {
                     //Case user entered an explaination
-                    if(event.get() instanceof PrivateMessageReceivedEvent) {
+                    if (event.get() instanceof PrivateMessageReceivedEvent) {
                         final PrivateMessageReceivedEvent privateMessageReceivedEvent = (PrivateMessageReceivedEvent) event.get();
                         try {
                             final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
@@ -473,7 +491,7 @@ public class QuizModule extends ReceiveModule {
                 question.getAttachments().stream()
                         .filter(attachment -> attachment.getCategory().equals(AttachmentCategory.EXPLAINATION))
                         .collect(Collectors.toList());
-        if(explainationAttachments.isEmpty()) {
+        if (explainationAttachments.isEmpty()) {
             user.openPrivateChannel().queue((channel) -> channel.sendMessage(sendToUserBuilder.build()).queue());
         } else {
             final String attachmentFileName = explainationAttachments.get(0).getFileName();
@@ -529,7 +547,7 @@ public class QuizModule extends ReceiveModule {
                         Button.primary(buttonIdBeginn + 4, "Keine Ahnung!")));
                 final List<QuestionAttachment> descriptionAttachments =
                         question.getAttachments().stream().filter(questionAttachment -> questionAttachment.getCategory()
-                        .equals(AttachmentCategory.DESCRIPTION)).collect(Collectors.toList());
+                                .equals(AttachmentCategory.DESCRIPTION)).collect(Collectors.toList());
 
                 if (descriptionAttachments.size() > 0) {
                     final File attachmentFile =
@@ -555,7 +573,7 @@ public class QuizModule extends ReceiveModule {
 
     /**
      * To replace pictures in questions with old links in http. Those should be refreshed here
-      */
+     */
     private void findAndReplaceAttachmentsInLinks() throws IOException {
         final QuestionAttachmentsAndDescriptionWrapper questionAttachmentsAndDescriptionWrapper =
                 findAndReplaceAndGetAttachmentOfHttpLinks(question.getText(), Optional.of(question.getId()));

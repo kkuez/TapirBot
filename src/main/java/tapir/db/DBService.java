@@ -14,6 +14,7 @@ import tapir.pokemon.Pokemon;
 import tapir.quiz.QuestionAttachment;
 import tapir.quiz.QuizModule;
 import tapir.quiz.QuizAnswer;
+import tapir.quiz.QuizModule.RankingTableEntry;
 import tapir.quiz.QuizQuestion;
 
 import java.io.File;
@@ -81,11 +82,16 @@ public class DBService {
     public List<QuizQuestion> getFilteredQuestionsForUser(User user) {
         final long userId = getUserId(user);
         //TODO User aus dem Result nehmen (siehe Object[])
+        return getFilteredQuestionsForUser(userId);
+    }
+
+
+    public List<QuizQuestion> getFilteredQuestionsForUser(long userId) {
         final List<Object[]> questionEntitiesUntyped =
                 emf.createEntityManager()
                         .createQuery("from QuizQuestionEntity qq inner join UserEntity u on " +
-                "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
-                "and uqq.user=" + userId + ") and not qq.user=" + userId).getResultList();
+                                "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
+                                "and uqq.user=" + userId + ") and not qq.user=" + userId).getResultList();
 
         List<QuizQuestion> questions = new ArrayList<>(questionEntitiesUntyped.size());
         for (Object[] o : questionEntitiesUntyped) {
@@ -376,4 +382,21 @@ public class DBService {
             em.close();
         }
     }
+
+    public List<QuizQuestion> getAllQuestions() {
+        final List<QuizQuestionEntity> questionEntitiesUntyped =
+                emf.createEntityManager().createQuery("from QuizQuestionEntity qq").getResultList();
+        List<QuizQuestion> questions = new ArrayList<>(questionEntitiesUntyped.size());
+        for (QuizQuestionEntity o : questionEntitiesUntyped) {
+            final QuizQuestion question = QuestionFactory.createPojo(this, o);
+            questions.add(question);
+        }
+        return questions;
+    }
+
+    public RankingTableEntry getUserQuestionInfo(long userId) {
+        final List<RankingTableEntry> userScoresPointRated = getUserScoresPointRated();
+        return userScoresPointRated.stream().filter(us -> us.getUserId() == userId).findAny().orElseThrow();
+    }
+
 }
