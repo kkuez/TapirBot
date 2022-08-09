@@ -20,7 +20,6 @@ public abstract class ReceiveModule {
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newScheduledThreadPool(2);
 
     public ReceiveModule(DBService dbService, Set<TextChannel> generalChannels, Set<Long> userNotAllowedToAsk) {
-
         this.dbService = dbService;
         this.generalChannels = generalChannels;
         this.userNotAllowedToAsk = userNotAllowedToAsk;

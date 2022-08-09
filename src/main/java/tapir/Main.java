@@ -57,15 +57,32 @@ public class Main {
                             case "delque":
                                 dbService.deleteQuestionWhereLike(line.replace(cmds[0] + " ", ""));
                                 break;
-                            case "harvest":
-
+                            case "chat":
+                                String channelName = cmds[1];
+                                String message = getMessageString(cmds, line);
+                                final HashMap<String, TextChannel> allChannels = new HashMap<>(allowedChannels.size() + pokeChannels.size());
+                                allowedChannels.forEach(channel -> allChannels.put(channel.getName(), channel));
+                                pokeChannels.forEach(channel -> allChannels.put(channel.getName(), channel));
+                                allChannels.get(channelName).sendMessage(new StringBuilder(message)).queue();
                                 break;
                             default:
+                                System.out.println("Hab ich nicht verstanden...");
                         }
+                    } else {
+                        System.out.println("Hab ich nicht verstanden...");
                     }
                 }
             }
         }
+    }
+
+    private static String getMessageString(String[] cmds, String line) {
+        String message = line.replace(cmds[0], "").replace(cmds[1], "");
+        while(message.startsWith(" ")) {
+            message = message.replaceFirst(" ", "");
+        }
+
+        return message;
     }
 
     public static boolean isDev() {
