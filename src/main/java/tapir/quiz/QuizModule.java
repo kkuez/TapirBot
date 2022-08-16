@@ -325,7 +325,7 @@ public class QuizModule extends ReceiveModule {
             final String attachmentFileName = uuid + "." + attachment.getFileExtension();
             attachment.downloadToFile(new File(attachmentsFolder, attachmentFileName));
             final QuestionAttachment questionAttachment =
-                    QuestionAttachmentFactory.createPojo(AttachmentCategory.DESCRIPTION, attachmentFileName);
+                    QuestionAttachmentFactory.createPojo(Optional.empty(), AttachmentCategory.DESCRIPTION, attachmentFileName);
             attachmentsPojos.add(questionAttachment);
         }
 

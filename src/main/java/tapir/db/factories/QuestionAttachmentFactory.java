@@ -34,10 +34,6 @@ public class QuestionAttachmentFactory extends PojoFactory {
         return new QuestionAttachment(Optional.of(entity.getQuestion()), entity.getFilename(), attachmentCategory);
     }
 
-    public static QuestionAttachment createPojo(AttachmentCategory category, String attachmentFileName) {
-        return createPojo(category, attachmentFileName);
-    }
-
     public static QuestionAttachment createPojo(Optional<Integer> questionIdOpt, AttachmentCategory category, String fileName) {
         return new QuestionAttachment(questionIdOpt, fileName, category);
     }
