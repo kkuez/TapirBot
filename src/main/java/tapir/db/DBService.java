@@ -128,7 +128,8 @@ public class DBService {
         return DriverManager.getConnection("jdbc:sqlite:" + dbPath);
     }
 
-    public void sendAnswer(long userId, int questionId, String answer) {
+    //TODO das hier lässt den rpi abstürzen mit nem kack Stacktrace
+/*    public void sendAnswer(long userId, int questionId, String answer) {
         UserQuizQuestionEntity entity = UserQuizQuestionFactory.createEntity(userId, questionId, answer);
         final EntityManager em = emf.createEntityManager();
         try {
@@ -137,6 +138,16 @@ public class DBService {
             em.getTransaction().commit();
         } finally {
             em.close();
+        }
+    }*/
+
+    public void sendAnswer(long userId, int questionId, String answer) {
+        try (Statement statement = getConnection().createStatement();) {
+            statement.executeUpdate(
+                    "insert into User_QuizQuestions(answer, user, question) values('" + answer + "'," + userId
+                            + "," + questionId + ")");
+        } catch (SQLException e) {
+            throw new TapirException("Could send answer to user " + userId, e);
         }
     }
 
