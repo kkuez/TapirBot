@@ -87,16 +87,31 @@ public class DBService {
 
 
     public List<QuizQuestion> getFilteredQuestionsForUser(long userId) {
-        final List<Object[]> questionEntitiesUntyped =
-                emf.createEntityManager()
-                        .createQuery("from QuizQuestionEntity qq inner join UserEntity u on " +
-                                "u.id=qq.user where not exists (from UserQuizQuestionEntity uqq where qq.id=uqq.question " +
-                                "and uqq.user=" + userId + ") and not qq.user=" + userId).getResultList();
+        List<QuizQuestion> questions = new ArrayList<>();
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs = statement.executeQuery("Select * from QuizQuestions qq inner join User u on " +
+                     "u.id=qq.user where not exists (select * from User_QuizQuestions uqq where qq.id=uqq.question " +
+                     "and uqq.user=" + userId + ") and not qq.user=" + userId)) {
+            while (rs.next()) {
+                List<QuizAnswer> answers = new ArrayList<>(4);
+                answers.add(new QuizAnswer(rs.getString(QuizModule.RIGHT_ANSWER), QuizModule.RIGHT_ANSWER));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_1), QuizModule.WRONG_ANSWER_1));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_2), QuizModule.WRONG_ANSWER_2));
+                answers.add(new QuizAnswer(rs.getString(QuizModule.WRONG_ANSWER_3), QuizModule.WRONG_ANSWER_3));
 
-        List<QuizQuestion> questions = new ArrayList<>(questionEntitiesUntyped.size());
-        for (Object[] o : questionEntitiesUntyped) {
-            final QuizQuestion question = QuestionFactory.createPojo(this, (QuizQuestionEntity) o[0]);
-            questions.add(question);
+                final int questionId = rs.getInt("id");
+                List<QuestionAttachment> attachments = getQuestionAttachments(questionId);
+                QuizQuestion question = new QuizQuestion(
+                        questionId,
+                        rs.getString("text"),
+                        answers,
+                        rs.getString("name"),
+                        rs.getString("Explaination"),
+                        attachments);
+                questions.add(question);
+            }
+        } catch (SQLException e) {
+            throw new TapirException("Could not get questions for user " + userId, e);
         }
         return questions;
     }
