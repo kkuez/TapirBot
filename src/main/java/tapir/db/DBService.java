@@ -11,17 +11,15 @@ import tapir.db.factories.QuestionFactory;
 import tapir.db.factories.UserQuizQuestionFactory;
 import tapir.exception.TapirException;
 import tapir.pokemon.Pokemon;
-import tapir.quiz.QuestionAttachment;
-import tapir.quiz.QuizModule;
-import tapir.quiz.QuizAnswer;
+import tapir.quiz.*;
 import tapir.quiz.QuizModule.RankingTableEntry;
-import tapir.quiz.QuizQuestion;
 
 import java.io.File;
 import java.sql.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import javax.persistence.*;
+import javax.swing.text.html.Option;
 
 public class DBService {
 
@@ -131,8 +129,25 @@ public class DBService {
     }
 
     public List<QuestionAttachment> getQuestionAttachments(int questionId) {
-            return getQuestionAttachmentsEntities(questionId).stream()
-                    .map(QuestionAttachmentFactory::createPojo).collect(Collectors.toList());
+        List<QuestionAttachment> attachments = new ArrayList<>();
+        final String sql = "select * from Question_Attachment where question=" + questionId;
+
+        try (Statement statement = getConnection().createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                final QuestionAttachment attachment = new QuestionAttachment(
+                        Optional.of(questionId),
+                        rs.getString("filename"),
+                        AttachmentCategory.valueOf(rs.getString("category"))
+                );
+
+                attachments.add(attachment);
+            }
+        } catch (SQLException e) {
+            throw new TapirException("Could not get Attachments!", e);
+        }
+
+            return attachments;
     }
 
     private long getUserId(User user) {
