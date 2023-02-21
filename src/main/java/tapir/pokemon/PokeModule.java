@@ -574,7 +574,7 @@ public class PokeModule extends ReceiveModule {
             System.out.println("Written " + file.getAbsolutePath());
         }
 
-        return "http://nussbot.kkuez.de/" + file.getName();
+        return "http://nussbot.kkuez.de:1111/" + file.getName();
     }
 
     private long getUserIdFromMention(String message) {
